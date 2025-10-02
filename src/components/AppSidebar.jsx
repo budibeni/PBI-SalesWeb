@@ -1,5 +1,6 @@
 "use client"
 
+import { SIDEBAR_MENUS } from "@/components/constants/sidebar-menu"
 import {
     Sidebar,
     SidebarContent,
@@ -10,18 +11,38 @@ import {
     SidebarTrigger,
     SidebarInset,
 } from "@/components/ui/sidebar"
-import { Home, Receipt, BarChart2, Settings, LogOut } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import {  User, LogOut } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import ThemeToggle from "@/components/ui/theme-toggle"
+import {Button} from "@/components/ui/button";
 
-function MenuItem({ href, icon: Icon, label }) {
+// util kecil buat gabung className
+function cx(...cls) {
+    return cls.filter(Boolean).join(" ")
+}
+
+
+// komponen item menu dengan state aktif
+function MenuItem({ href, icon: Icon, label, active }) {
     return (
         <Link
             href={href}
-            className="
-        flex items-center gap-3 rounded-md px-2 py-2 text-sm
-        text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
-      "
+            aria-current={active ? "page" : undefined}
+            className={cx(
+                "flex items-center gap-3 rounded-md px-4 py-2 text-sm outline-none ring-0",
+                "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                // style ketika aktif
+                active && "bg-sidebar-accent text-sidebar-accent-foreground"
+            )}
         >
             <Icon size={18} />
             <span>{label}</span>
@@ -30,49 +51,89 @@ function MenuItem({ href, icon: Icon, label }) {
 }
 
 export default function AppSidebarLayout({ children }) {
+    const pathname = usePathname()
+
+    // logika aktif: cocokkan path sekarang dengan href (prefix match aman untuk route anak)
+    const isActive = (href) =>
+        pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
+
+    // cari title header dari menu aktif; fallback ke segment terakhir (Title Case)
+    const activeMenu = SIDEBAR_MENUS.find(m => isActive(m.href))
+    const headerTitle =
+        activeMenu?.label ||
+        (pathname?.split("/").filter(Boolean).pop() || "Beranda")
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+
+    // kelompokkan menu by section
+    const sectionGroups = SIDEBAR_MENUS.reduce((acc, m) => {
+        acc[m.section] = acc[m.section] || []
+        acc[m.section].push(m)
+        return acc
+    }, {})
+
     return (
         <SidebarProvider>
             {/* Sidebar kiri */}
-            <Sidebar
-                className="
-          bg-sidebar text-sidebar-foreground
-          border-r border-sidebar-border
-        "
-            >
+            <Sidebar className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
                 <SidebarHeader>
                     <div className="flex items-center justify-between px-2">
-                        <div className="font-bold">My App</div>
+                        <div className="font-bold">SalesGo PBI</div>
                     </div>
                 </SidebarHeader>
 
                 <SidebarContent>
-                    <div className="space-y-1">
-                        <div className="px-2 text-xs uppercase text-muted-foreground">Menu</div>
-                        <MenuItem href="/komisi/simulasi" icon={Home} label="Simulasi Komisi" />
-                        <MenuItem href="/transaksi" icon={Receipt} label="Transaksi" />
-                        <MenuItem href="/laporan" icon={BarChart2} label="Laporan" />
-                    </div>
-
-                    <div className="mt-6 space-y-1">
-                        <div className="px-2 text-xs uppercase text-muted-foreground">Pengaturan</div>
-                        <MenuItem href="/settings" icon={Settings} label="Settings" />
-                    </div>
+                    {Object.entries(sectionGroups).map(([section, items]) => (
+                        <div key={section} className="space-y-1 mt-2">
+                            <div className="px-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                {section}
+                            </div>
+                            {items.map(({ href, icon, label }) => (
+                                <MenuItem
+                                    key={href}
+                                    href={href}
+                                    icon={icon}
+                                    label={label}
+                                    active={isActive(href)}
+                                />
+                            ))}
+                        </div>
+                    ))}
                 </SidebarContent>
 
                 <SidebarFooter>
-                    <div className="flex items-center justify-between px-2">
-                        <ThemeToggle />
-                        <button
-                            className="
-                inline-flex items-center gap-2 rounded-md border border-sidebar-border
-                px-3 py-2 text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
-                ring-1 ring-inset ring-sidebar-ring/0 focus-visible:ring-sidebar-ring/50
-              "
-                            type="button"
-                        >
-                            <LogOut size={16} />
-                            <span className="hidden md:inline">Keluar</span>
-                        </button>
+                    <div className="flex items-center justify-start px-2">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                {/* Tombol pemicu di PALING KIRI, varian ghost */}
+                                <Button variant="ghost" className="flex items-center gap-2">
+                                    <User className="h-4 w-4" />
+                                    <span className="hidden md:inline font-medium">Nama Akun</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent side="top" align="start" className="w-48">
+                                <DropdownMenuLabel className="text-xs text-muted-foreground">Akun</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    <Link href="/akun" className="flex items-center gap-2">
+                                        <User className="h-4 w-4" />
+                                        Akun Saya
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        // TODO: isi logika logout (hapus token/session, lalu redirect)
+                                        // contoh next-auth: signOut({ callbackUrl: "/login" })
+                                        console.log("Keluar diklik")
+                                    }}
+                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    Keluar
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </SidebarFooter>
 
@@ -81,20 +142,17 @@ export default function AppSidebarLayout({ children }) {
 
             {/* Area konten (kanan) + tombol trigger */}
             <SidebarInset className="flex min-h-screen flex-col bg-background text-foreground">
-                <header
-                    className="
-            flex h-12 items-center gap-2 border-b border-sidebar-border
-            bg-background px-3
-          "
-                >
+                <header className="flex h-12 items-center gap-3 border-b border-sidebar-border bg-background px-3">
                     <SidebarTrigger />
-                    {/*ganti Header dengan menu yang dipilih*/}
-                    <div className="font-medium">Header</div>
-                    <div className="ml-auto">
-                        {/* Opsional: toggle di header juga */}
-                        {/* <ThemeToggle />*/}
+                    {/* caption header mengikuti menu terpilih */}
+                    <div className="font-medium">{headerTitle}</div>
+
+                    {/* bagian kanan */}
+                    <div className="ml-auto flex items-center gap-2">
+                        <ThemeToggle />
                     </div>
                 </header>
+
 
                 <main className="flex-1 p-4 bg-background text-foreground">
                     {children}
