@@ -10,11 +10,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
     return (
         <html lang="en" suppressHydrationWarning>
-        <body className="antialiased">
-        <ThemeProvider>
-            <AppSidebarLayout>{children}</AppSidebarLayout>
-        </ThemeProvider>
-        </body>
+            <body className="antialiased" suppressHydrationWarning>
+                <ThemeProvider>
+                    <AppSidebarLayout>
+                        {children}
+                    </AppSidebarLayout>
+                </ThemeProvider>
+            </body>
         </html>
     )
 }

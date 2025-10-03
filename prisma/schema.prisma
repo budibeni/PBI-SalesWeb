@@ -1,0 +1,32 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model TbMasterItem {
+  id            String   @id @default(cuid()) @map("id")
+  kodeItem      String   @unique @map("kode_item")
+  namaItem      String   @map("nama_item")
+  deskripsi     String?  @map("deskripsi")
+  harga         Int      @map("harga")
+  satuan        String   @map("satuan")
+  kategori      String?  @map("kategori")
+  merek         String?  @map("merek")
+  dibuatOleh    String?  @map("dibuat_oleh")
+  dibuatTanggal DateTime @default(now()) @map("dibuat_tanggal")
+  diubahOleh    String?  @map("diubah_oleh")
+  diubahTanggal DateTime @updatedAt @map("diubah_tanggal")
+
+  @@map("tb_master_item")
+}
