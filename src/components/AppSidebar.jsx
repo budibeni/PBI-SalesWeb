@@ -1,35 +1,25 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { SIDEBAR_MENUS } from "@/components/constants/sidebar-menu"
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarHeader,
-    SidebarRail,
-    SidebarProvider,
-    SidebarTrigger,
-    SidebarInset,
+    Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail,
+    SidebarProvider, SidebarTrigger, SidebarInset,
 } from "@/components/ui/sidebar"
 import {
-    DropdownMenu,
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuLabel,
+    DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuSeparator, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import {  User, LogOut } from "lucide-react"
+import { User, Key, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import ThemeToggle from "@/components/ui/theme-toggle"
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 
 // util kecil buat gabung className
 function cx(...cls) {
     return cls.filter(Boolean).join(" ")
 }
-
 
 // komponen item menu dengan state aktif
 function MenuItem({ href, icon: Icon, label, active }) {
@@ -40,7 +30,6 @@ function MenuItem({ href, icon: Icon, label, active }) {
             className={cx(
                 "flex items-center gap-3 rounded-md px-4 py-2 text-sm outline-none ring-0",
                 "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                // style ketika aktif
                 active && "bg-sidebar-accent text-sidebar-accent-foreground"
             )}
         >
@@ -50,15 +39,30 @@ function MenuItem({ href, icon: Icon, label, active }) {
     )
 }
 
-export default function AppSidebarLayout({ children }) {
+export default function AppSidebarLayout({ children, user }) {
     const pathname = usePathname()
 
-    // logika aktif: cocokkan path sekarang dengan href (prefix match aman untuk route anak)
+    // === nama user ===
+    const [me, setMe] = useState(user || null)
+    useEffect(() => {
+        // fallback fetch hanya jika prop user tidak diberikan
+        if (!me) {
+            fetch("/api/me")
+                .then((r) => (r.ok ? r.json() : null))
+                .then((data) => data && setMe(data))
+                .catch(() => {})
+        }
+    }, [me])
+
+    const displayName =
+        (me?.nama && me.nama.trim()) || me?.akun || me?.email || "Pengguna"
+
+    // logika aktif: prefix match aman untuk route anak
     const isActive = (href) =>
         pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
 
-    // cari title header dari menu aktif; fallback ke segment terakhir (Title Case)
-    const activeMenu = SIDEBAR_MENUS.find(m => isActive(m.href))
+    // title header mengikuti menu aktif; fallback ke segmen terakhir
+    const activeMenu = SIDEBAR_MENUS.find((m) => isActive(m.href))
     const headerTitle =
         activeMenu?.label ||
         (pathname?.split("/").filter(Boolean).pop() || "Beranda")
@@ -108,26 +112,47 @@ export default function AppSidebarLayout({ children }) {
                                 {/* Tombol pemicu di PALING KIRI, varian ghost */}
                                 <Button variant="ghost" className="flex items-center gap-2">
                                     <User className="h-4 w-4" />
-                                    <span className="hidden md:inline font-medium">Nama Akun</span>
+                                    {/* tampilkan nama user login */}
+                                    <span
+                                        className="hidden md:inline font-medium truncate max-w-[160px]"
+                                        title={displayName}
+                                    >
+                    {displayName}
+                  </span>
                                 </Button>
                             </DropdownMenuTrigger>
 
-                            <DropdownMenuContent side="top" align="start" className="w-48">
-                                <DropdownMenuLabel className="text-xs text-muted-foreground">Akun</DropdownMenuLabel>
+                            <DropdownMenuContent side="top" align="start" className="w-52">
+                                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                    Akun
+                                </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
+
                                 <DropdownMenuItem asChild>
-                                    <Link href="/akun" className="flex items-center gap-2">
+                                    <Link href="/account" className="flex items-center gap-2">
                                         <User className="h-4 w-4" />
                                         Akun Saya
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    onClick={() => fetch("/api/logout", { method: "POST" }).then(()=>location.href="/login")}
-                                    className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    Keluar
+
+                                <DropdownMenuItem asChild>
+                                    <Link href="/account/password" className="flex items-center gap-2">
+                                        <Key className="h-4 w-4" />
+                                        Ganti Sandi
+                                    </Link>
                                 </DropdownMenuItem>
+
+                                <form action="/api/auth/logout" method="post">
+                                    <DropdownMenuItem asChild>
+                                        <button
+                                            type="submit"
+                                            className="w-full flex items-center gap-2 text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                                        >
+                                            <LogOut className="h-4 w-4" />
+                                            Keluar
+                                        </button>
+                                    </DropdownMenuItem>
+                                </form>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -140,15 +165,11 @@ export default function AppSidebarLayout({ children }) {
             <SidebarInset className="flex min-h-screen flex-col bg-background text-foreground">
                 <header className="flex h-12 items-center gap-3 border-b border-sidebar-border bg-background px-3">
                     <SidebarTrigger />
-                    {/* caption header mengikuti menu terpilih */}
                     <div className="font-medium">{headerTitle}</div>
-
-                    {/* bagian kanan */}
                     <div className="ml-auto flex items-center gap-2">
                         <ThemeToggle />
                     </div>
                 </header>
-
 
                 <main className="flex-1 p-4 bg-background text-foreground">
                     {children}

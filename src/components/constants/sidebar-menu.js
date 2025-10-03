@@ -14,7 +14,6 @@ export const SIDEBAR_MENUS = [
     { id: "target",           href: "/target",           icon: Crosshair,     label: "Target Penjualan",  section: "Menu" },
     { id: "komisi-simulasi",  href: "/komisi/simulasi",  icon: SquarePercent, label: "Simulasi Komisi",   section: "Menu" },
     { id: "dokumen",          href: "/dokumen",          icon: FileText,      label: "Dokumen & Brosur",  section: "Menu" },
-    { id: "akun",             href: "/akun",             icon: UserPen,       label: "Akun Saya",         section: "Lainnya" },
-    { id: "ganti-sandi",      href: "/ganti-sandi",      icon: Key,           label: "Ganti Sandi",       section: "Lainnya" },
+    { id: "bantuan",             href: "/bantuan",             icon: UserPen,       label: "Bantuan",         section: "Lainnya" },
 ];
 

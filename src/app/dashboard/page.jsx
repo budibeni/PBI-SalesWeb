@@ -12,9 +12,10 @@ export default async function Dashboard() {
             <p>
                 Halo, <b>{user?.nama || user?.akun || user?.email}</b> (role: {user?.role ?? "?"}).
             </p>
-            <form action="/api/auth/logout" method="post" style={{ marginTop: 16 }}>
+            <form action="/api/auth/logout" method="post">
                 <button>Keluar</button>
             </form>
+
         </main>
     )
 }

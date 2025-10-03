@@ -1,3 +1,4 @@
+// app/account/ui/AccountForm.jsx
 "use client"
 
 import { useState } from "react"
@@ -6,11 +7,11 @@ import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { api } from "@/lib/api"
 
 export default function AccountForm({ initialData }) {
     const router = useRouter()
     const [form, setForm] = useState({
-        // akun ditampilkan terpisah (read-only), tidak ikut state PATCH
         email: initialData?.email || "",
         noHp: initialData?.noHp || "",
         nama: initialData?.nama || "",
@@ -31,17 +32,7 @@ export default function AccountForm({ initialData }) {
         setOkMsg("")
         setLoading(true)
         try {
-            const res = await fetch("/api/me", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(form), // tidak ada field 'akun' di body
-            })
-
-            let data
-            try { data = await res.json() } catch { data = {} }
-
-            if (!res.ok) throw new Error(data?.error || "Gagal menyimpan")
-
+            await api("/api/me", { method: "PATCH", body: form })
             setOkMsg("Perubahan disimpan.")
             router.refresh()
         } catch (err) {
@@ -54,7 +45,7 @@ export default function AccountForm({ initialData }) {
     return (
         <Card className="p-6">
             <form className="grid gap-4" onSubmit={onSubmit}>
-                {/* 🔒 AKUN: read-only */}
+                {/* Akun: read-only */}
                 <div className="grid gap-1.5">
                     <Label htmlFor="akun">Akun (username)</Label>
                     <Input id="akun" value={initialData?.akun || ""} readOnly disabled />
