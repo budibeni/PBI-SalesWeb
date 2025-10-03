@@ -122,11 +122,7 @@ export default function AppSidebarLayout({ children }) {
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                    onClick={() => {
-                                        // TODO: isi logika logout (hapus token/session, lalu redirect)
-                                        // contoh next-auth: signOut({ callbackUrl: "/login" })
-                                        console.log("Keluar diklik")
-                                    }}
+                                    onClick={() => fetch("/api/logout", { method: "POST" }).then(()=>location.href="/login")}
                                     className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
                                 >
                                     <LogOut className="h-4 w-4" />

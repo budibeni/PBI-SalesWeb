@@ -9,11 +9,12 @@ import {
 } from "lucide-react"
 
 export const SIDEBAR_MENUS = [
-    { href: "/produk",       icon: Box, label: "Daftar Produk",     section: "Menu" },
-    { href: "/kalkulator",   icon: Calculator, label: "Kalkulator Produk", section: "Menu" },
-    { href: "/target",       icon: Crosshair, label: "Target Penjualan",  section: "Menu" },
-    { href: "/komisi/simulasi", icon: SquarePercent, label: "Simulasi Komisi", section: "Menu" },
-    { href: "/dokumen",      icon: FileText, label: "Dokumen & Brosur",   section: "Menu" },
-    { href: "/akun",         icon: UserPen, label: "Akun Saya",      section: "Lainnya" },
-    { href: "/ganti-sandi",  icon: Key, label: "Ganti Sandi",        section: "Lainnya" },
-]
+    { id: "produk",           href: "/produk",           icon: Box,           label: "Daftar Produk",    section: "Menu" },
+    { id: "kalkulator",       href: "/kalkulator",       icon: Calculator,    label: "Kalkulator Produk", section: "Menu" },
+    { id: "target",           href: "/target",           icon: Crosshair,     label: "Target Penjualan",  section: "Menu" },
+    { id: "komisi-simulasi",  href: "/komisi/simulasi",  icon: SquarePercent, label: "Simulasi Komisi",   section: "Menu" },
+    { id: "dokumen",          href: "/dokumen",          icon: FileText,      label: "Dokumen & Brosur",  section: "Menu" },
+    { id: "akun",             href: "/akun",             icon: UserPen,       label: "Akun Saya",         section: "Lainnya" },
+    { id: "ganti-sandi",      href: "/ganti-sandi",      icon: Key,           label: "Ganti Sandi",       section: "Lainnya" },
+];
+

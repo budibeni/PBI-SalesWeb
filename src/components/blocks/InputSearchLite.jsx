@@ -48,9 +48,9 @@ const InputSearchLite = React.forwardRef(function InputSearchLite(
         getTitle,
         getDescription,
         searchKeys,
-        placeholder = "Cari…",
+        placeholder = "Cari dan pilih data…",
         emptyText = "Tidak ada data.",
-        groupLabel = "Hasil",
+        groupLabel = "Silahkan pilih dari hasil pencarian",
         allowClear = true,
         buttonClassName = "w-full justify-between",
         popoverClassName = "",
@@ -179,12 +179,13 @@ const InputSearchLite = React.forwardRef(function InputSearchLite(
                                                         <div className="flex flex-col w-full">
                                                             <span className="font-medium leading-tight">{titleOf(row)}</span>
                                                             {(descriptionKey || getDescription) && (
-                                                                <span className="text-xs opacity-70 leading-snug truncate">
-                                  {descOf(row)}
-                                </span>
+                                                                <span className="text-xs opacity-70 leading-snug whitespace-normal break-words">
+                                                                {descOf(row)}
+                                                              </span>
                                                             )}
                                                         </div>
                                                     </CommandItem>
+
                                                 ))}
                                             </CommandGroup>
                                         </>
