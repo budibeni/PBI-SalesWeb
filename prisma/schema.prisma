@@ -19,6 +19,7 @@ model TbUser {
   bagian        String?
   downline      Json?
   upline        Json?
+  aktif         Boolean  @default(true)
   dibuatOleh    String?
   dibuatTanggal DateTime @default(now())
   diubahOleh    String?

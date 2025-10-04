@@ -1,3 +1,4 @@
+// app/users/ui/UsersManager.jsx
 "use client"
 
 import { useMemo, useState } from "react"
@@ -13,6 +14,7 @@ import { groupMenusBySection, defaultAccess, normalizeAccess } from "@/lib/acces
 import { SIDEBAR_MENUS } from "@/components/constants/sidebar-menu"
 import { UserPlus, Settings2 } from "lucide-react"
 import { useApiAuth } from "@/lib/client-api"
+import { Switch } from "@/components/ui/switch" // ⬅️ tambah
 
 function AccessEditor({ value, onChange }) {
     const sections = useMemo(() => groupMenusBySection(), [])
@@ -56,10 +58,7 @@ function AccessEditor({ value, onChange }) {
                         <div className="grid sm:grid-cols-2 gap-2">
                             {items.map(m => (
                                 <label key={m.id} className="flex items-center gap-2 rounded-md border p-2">
-                                    <Checkbox
-                                        checked={!!state[m.id]}
-                                        onCheckedChange={(v) => setOne(m.id, v)}
-                                    />
+                                    <Checkbox checked={!!state[m.id]} onCheckedChange={(v) => setOne(m.id, v)} />
                                     <span>{m.label}</span>
                                 </label>
                             ))}
@@ -75,36 +74,31 @@ export default function UsersManager({ initialUsers }) {
     const apiAuth = useApiAuth()
     const [users, setUsers] = useState(initialUsers || [])
     const [openNew, setOpenNew] = useState(false)
-    const [openEdit, setOpenEdit] = useState(null) // user id atau null
+    const [openEdit, setOpenEdit] = useState(null)
     const [creating, setCreating] = useState(false)
     const [updating, setUpdating] = useState(false)
     const [error, setError] = useState("")
 
-    // state form create
+    // form create
     const [f, setF] = useState({
-        akun: "",
-        email: "",
-        noHp: "",
-        nama: "",
-        bagian: "",
-        role: "user",
-        password: "",
+        akun: "", email: "", noHp: "", nama: "", bagian: "",
+        role: "user", password: "",
         akses: defaultAccess(false),
+        aktif: true, // default aktif
     })
 
     const createUser = async (e) => {
         e.preventDefault()
         setCreating(true); setError("")
         try {
-            const res = await apiAuth("/api/users", {
+            await apiAuth("/api/users", {
                 method: "POST",
-                body: { ...f, akses: f.akses },
+                body: { ...f, akses: f.akses, aktif: f.aktif },
             })
-            // ambil ulang list
             const list = await apiAuth("/api/users")
             setUsers(list?.users || [])
             setOpenNew(false)
-            setF({ akun:"", email:"", noHp:"", nama:"", bagian:"", role:"user", password:"", akses: defaultAccess(false) })
+            setF({ akun:"", email:"", noHp:"", nama:"", bagian:"", role:"user", password:"", akses: defaultAccess(false), aktif: true })
         } catch (err) {
             setError(err.message)
         } finally {
@@ -114,10 +108,12 @@ export default function UsersManager({ initialUsers }) {
 
     const userById = (id) => users.find(u => u.id === id)
     const [editAccess, setEditAccess] = useState(defaultAccess(false))
+    const [editAktif, setEditAktif] = useState(true) // ⬅️ state status untuk dialog edit
 
     const openEditFor = (id) => {
         const u = userById(id)
         setEditAccess(normalizeAccess(u?.akses || {}))
+        setEditAktif(!!u?.aktif) // ⬅️ set status awal
         setOpenEdit(id)
     }
 
@@ -127,9 +123,8 @@ export default function UsersManager({ initialUsers }) {
         try {
             await apiAuth(`/api/users/${openEdit}`, {
                 method: "PATCH",
-                body: { akses: editAccess },
+                body: { akses: editAccess, aktif: editAktif }, // ⬅️ kirim akses + status
             })
-            // refresh list
             const list = await apiAuth("/api/users")
             setUsers(list?.users || [])
             setOpenEdit(null)
@@ -193,6 +188,14 @@ export default function UsersManager({ initialUsers }) {
                                     <Label htmlFor="password">Password (min 8)</Label>
                                     <Input id="password" type="password" value={f.password} onChange={e=>setF(s=>({...s, password:e.target.value}))} required />
                                 </div>
+                                {/* Status aktif saat create */}
+                                <div className="grid gap-1.5 sm:col-span-2">
+                                    <Label htmlFor="aktif">Status</Label>
+                                    <div className="flex items-center gap-3">
+                                        <Switch id="aktif" checked={f.aktif} onCheckedChange={(v)=>setF(s=>({...s, aktif:v}))} />
+                                        <span className="text-sm">{f.aktif ? "Aktif" : "Nonaktif"}</span>
+                                    </div>
+                                </div>
                             </div>
 
                             <Separator />
@@ -221,20 +224,33 @@ export default function UsersManager({ initialUsers }) {
                             <div key={u.id} className="py-3 flex items-center gap-3">
                                 <div className="min-w-0 flex-1">
                                     <div className="font-medium truncate">{u.nama || u.akun || u.email}</div>
-                                    <div className="text-xs text-muted-foreground truncate">{u.email} • {u.akun} • {u.role}</div>
+                                    <div className="text-xs text-muted-foreground truncate">
+                                        {u.email} • {u.akun} • {u.role} • {u.aktif ? "Aktif" : "Nonaktif"}
+                                    </div>
                                 </div>
                                 <Dialog open={openEdit === u.id} onOpenChange={(v)=> v ? openEditFor(u.id) : setOpenEdit(null)}>
                                     <DialogTrigger asChild>
                                         <Button size="sm" variant="outline"><Settings2 className="h-4 w-4 mr-2" />Edit Akses</Button>
                                     </DialogTrigger>
                                     <DialogContent className="max-w-2xl">
-                                        <DialogHeader><DialogTitle>Edit Akses: {u.nama || u.akun}</DialogTitle></DialogHeader>
+                                        <DialogHeader><DialogTitle>Edit: {u.nama || u.akun}</DialogTitle></DialogHeader>
 
                                         {error && (
                                             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                                                 {error}
                                             </div>
                                         )}
+
+                                        {/* Status aktif saat edit */}
+                                        <div className="mb-3">
+                                            <Label htmlFor="edit-aktif">Status</Label>
+                                            <div className="flex items-center gap-3 mt-1.5">
+                                                <Switch id="edit-aktif" checked={editAktif} onCheckedChange={setEditAktif} />
+                                                <span className="text-sm">{editAktif ? "Aktif" : "Nonaktif"}</span>
+                                            </div>
+                                        </div>
+
+                                        <Separator className="my-3" />
 
                                         <AccessEditor value={editAccess} onChange={setEditAccess} />
 

@@ -20,9 +20,11 @@ export async function GET() {
 
         const users = await prisma.tbUser.findMany({
             orderBy: { dibuatTanggal: "desc" },
-            select: { id: true, akun: true, email: true, noHp: true, nama: true, bagian: true, role: true, akses: true },
+            select: {
+                id: true, akun: true, email: true, noHp: true, nama: true,
+                bagian: true, role: true, akses: true, aktif: true, // ⬅️ aktif
+            },
         })
-        // pastikan akses selalu normalized
         const data = users.map(u => ({ ...u, akses: normalizeAccess(u.akses) }))
         return NextResponse.json({ users: data })
     } catch (e) {
@@ -39,8 +41,6 @@ export async function POST(req) {
 
         const ct = (req.headers.get("content-type") || "").toLowerCase()
         const isJson = ct.includes("application/json")
-
-        // Ambil body: JSON → object; Form → string map
         const body = isJson
             ? await req.json()
             : Object.fromEntries((await req.formData()).entries())
@@ -53,22 +53,26 @@ export async function POST(req) {
         const role     = (body.role?.toString().trim() || "user").toLowerCase()
         const password = body.password?.toString() || ""
 
-        // ---- akses: terima object (JSON) atau string (Form), lalu normalisasi
+        // aktif: terima boolean/string; default true
+        let aktif = body.aktif
+        if (typeof aktif === "string") {
+            aktif = ["true", "1", "on", "yes"].includes(aktif.toLowerCase())
+        }
+        if (typeof aktif !== "boolean") aktif = true
+
+        // akses: object atau string JSON
         let aksesRaw = body.akses
         let aksesParsed
         if (typeof aksesRaw === "string") {
             if (aksesRaw.trim() !== "") {
-                try {
-                    aksesParsed = JSON.parse(aksesRaw)      // kiriman dari <form> hidden input
-                } catch {
+                try { aksesParsed = JSON.parse(aksesRaw) } catch {
                     return NextResponse.json({ error: "Field 'akses' harus JSON valid" }, { status: 400 })
                 }
             }
         } else if (aksesRaw && typeof aksesRaw === "object") {
-            aksesParsed = aksesRaw                      // kiriman dari fetch JSON (useApiAuth)
+            aksesParsed = aksesRaw
         }
         const akses = normalizeAccess(aksesParsed ?? defaultAccess(false))
-        // ---- end akses
 
         if (!akun || !email || !noHp || !password) {
             return NextResponse.json({ error: "akun, email, noHp, password wajib" }, { status: 400 })
@@ -81,14 +85,10 @@ export async function POST(req) {
 
         const created = await prisma.tbUser.create({
             data: {
-                akun,
-                email,
-                noHp,
-                nama,
-                bagian,
-                role,
-                passwordHash,        // jika kolommu bernama 'sandi', ganti ke: sandi: passwordHash
+                akun, email, noHp, nama, bagian, role,
+                passwordHash,
                 akses,
+                aktif, // ⬅️ simpan status
                 dibuatOleh: me.email || me.akun || "system",
             },
             select: { id: true },

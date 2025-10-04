@@ -18,7 +18,10 @@ export default async function UsersPage() {
 
     const users = await prisma.tbUser.findMany({
         orderBy: { dibuatTanggal: "desc" },
-        select: { id: true, akun: true, email: true, noHp: true, nama: true, bagian: true, role: true, akses: true },
+        select: {
+            id: true, akun: true, email: true, noHp: true, nama: true,
+            bagian: true, role: true, akses: true, aktif: true, // ⬅️ aktif
+        },
     })
 
     return (
