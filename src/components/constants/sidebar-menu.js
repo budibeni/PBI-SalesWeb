@@ -1,19 +1,31 @@
+// components/constants/sidebar-menu.js
+import { ACCESS_ITEMS } from "@/lib/access-items"
 import {
     SquarePercent,
     UserPen,
-    Key,
     Calculator,
     Crosshair,
     FileText,
     Box,
+    AppWindow, // default icon
 } from "lucide-react"
 
-export const SIDEBAR_MENUS = [
-    { id: "produk",           href: "/produk",           icon: Box,           label: "Daftar Produk",    section: "Menu" },
-    { id: "kalkulator",       href: "/kalkulator",       icon: Calculator,    label: "Kalkulator Produk", section: "Menu" },
-    { id: "target",           href: "/target",           icon: Crosshair,     label: "Target Penjualan",  section: "Menu" },
-    { id: "komisi-simulasi",  href: "/komisi/simulasi",  icon: SquarePercent, label: "Simulasi Komisi",   section: "Menu" },
-    { id: "dokumen",          href: "/dokumen",          icon: FileText,      label: "Dokumen & Brosur",  section: "Menu" },
-    { id: "bantuan",             href: "/bantuan",             icon: UserPen,       label: "Bantuan",         section: "Lainnya" },
-];
+const DEFAULT_ICON = AppWindow
 
+const ICONS = {
+    produk: Box,
+    kalkulator: Calculator,
+    target: Crosshair,
+    "komisi-simulasi": SquarePercent,
+    dokumen: FileText,
+    bantuan: UserPen,
+    users: Box,
+}
+
+// Ekspor untuk UI: daftar menu lengkap
+export const SIDEBAR_MENUS = ACCESS_ITEMS.map((it) => {
+    const icon = ICONS[it.id] ?? DEFAULT_ICON
+    return { ...it, icon }
+})
+
+export { ACCESS_ITEMS } // kalau UI lain butuh

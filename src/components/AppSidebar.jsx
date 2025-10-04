@@ -1,3 +1,4 @@
+// components/AppSidebar.jsx
 "use client"
 
 import { useEffect, useState } from "react"
@@ -16,12 +17,10 @@ import { usePathname } from "next/navigation"
 import ThemeToggle from "@/components/ui/theme-toggle"
 import { Button } from "@/components/ui/button"
 
-// util kecil buat gabung className
 function cx(...cls) {
     return cls.filter(Boolean).join(" ")
 }
 
-// komponen item menu dengan state aktif
 function MenuItem({ href, icon: Icon, label, active }) {
     return (
         <Link
@@ -30,7 +29,7 @@ function MenuItem({ href, icon: Icon, label, active }) {
             className={cx(
                 "flex items-center gap-3 rounded-md px-4 py-2 text-sm outline-none ring-0",
                 "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                active && "bg-sidebar-accent text-sidebar-accent-foreground"
+                active && "bg-sidebar-accent text-sidebar-accent-foreground cursor-pointer"
             )}
         >
             <Icon size={18} />
@@ -42,11 +41,12 @@ function MenuItem({ href, icon: Icon, label, active }) {
 export default function AppSidebarLayout({ children, user }) {
     const pathname = usePathname()
 
-    // === nama user ===
+    // state user (sudah datang dari layout, termasuk akses)
     const [me, setMe] = useState(user || null)
+
+    // fallback: jika belum ada user atau akses belum terisi, ambil dari /api/me
     useEffect(() => {
-        // fallback fetch hanya jika prop user tidak diberikan
-        if (!me) {
+        if (!me || me.akses == null) {
             fetch("/api/me")
                 .then((r) => (r.ok ? r.json() : null))
                 .then((data) => data && setMe(data))
@@ -57,11 +57,21 @@ export default function AppSidebarLayout({ children, user }) {
     const displayName =
         (me?.nama && me.nama.trim()) || me?.akun || me?.email || "Pengguna"
 
-    // logika aktif: prefix match aman untuk route anak
+    // policy akses:
+    // - admin lihat semua
+    // - saat loading (me belum ada/akses belum ada) -> tampilkan agar tidak blank
+    // - setelah akses siap -> wajib true
+    const hasAksesInfo = !!(me && typeof me.akses === "object")
+    const can = (id) => {
+        if (!me) return true
+        if (me.role === "admin") return true
+        if (!hasAksesInfo) return true
+        return !!me.akses?.[id]
+    }
+
     const isActive = (href) =>
         pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
 
-    // title header mengikuti menu aktif; fallback ke segmen terakhir
     const activeMenu = SIDEBAR_MENUS.find((m) => isActive(m.href))
     const headerTitle =
         activeMenu?.label ||
@@ -69,7 +79,6 @@ export default function AppSidebarLayout({ children, user }) {
             .replace(/-/g, " ")
             .replace(/\b\w/g, (c) => c.toUpperCase())
 
-    // kelompokkan menu by section
     const sectionGroups = SIDEBAR_MENUS.reduce((acc, m) => {
         acc[m.section] = acc[m.section] || []
         acc[m.section].push(m)
@@ -78,41 +87,42 @@ export default function AppSidebarLayout({ children, user }) {
 
     return (
         <SidebarProvider>
-            {/* Sidebar kiri */}
             <Sidebar className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
                 <SidebarHeader>
                     <div className="flex items-center justify-between px-2">
-                        <div className="font-bold">SalesGo PBI</div>
+                        <div className="font-bold">PBI SalesGo</div>
                     </div>
                 </SidebarHeader>
 
                 <SidebarContent>
-                    {Object.entries(sectionGroups).map(([section, items]) => (
-                        <div key={section} className="space-y-1 mt-2">
-                            <div className="px-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                                {section}
+                    {Object.entries(sectionGroups).map(([section, items]) => {
+                        const visible = items.filter(({ id }) => can(id))
+                        if (visible.length === 0) return null
+                        return (
+                            <div key={section} className="space-y-1 mt-2">
+                                <div className="px-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    {section}
+                                </div>
+                                {visible.map(({ href, icon, label }) => (
+                                    <MenuItem
+                                        key={href}
+                                        href={href}
+                                        icon={icon}
+                                        label={label}
+                                        active={isActive(href)}
+                                    />
+                                ))}
                             </div>
-                            {items.map(({ href, icon, label }) => (
-                                <MenuItem
-                                    key={href}
-                                    href={href}
-                                    icon={icon}
-                                    label={label}
-                                    active={isActive(href)}
-                                />
-                            ))}
-                        </div>
-                    ))}
+                        )
+                    })}
                 </SidebarContent>
 
                 <SidebarFooter>
                     <div className="flex items-center justify-start px-2">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                {/* Tombol pemicu di PALING KIRI, varian ghost */}
-                                <Button variant="ghost" className="flex items-center gap-2">
+                                <Button variant="ghost" className="flex flex-1 items-center gap-2 cursor-pointer">
                                     <User className="h-4 w-4" />
-                                    {/* tampilkan nama user login */}
                                     <span
                                         className="hidden md:inline font-medium truncate max-w-[160px]"
                                         title={displayName}
@@ -161,7 +171,6 @@ export default function AppSidebarLayout({ children, user }) {
                 <SidebarRail />
             </Sidebar>
 
-            {/* Area konten (kanan) + tombol trigger */}
             <SidebarInset className="flex min-h-screen flex-col bg-background text-foreground">
                 <header className="flex h-12 items-center gap-3 border-b border-sidebar-border bg-background px-3">
                     <SidebarTrigger />
