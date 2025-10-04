@@ -14,7 +14,7 @@ import {User, Lock, Eye, EyeOff, ShieldCheck,  BookOpenText} from "lucide-react"
 
 export default function LoginPage() {
     const search = useSearchParams()
-    const redirect   = search.get("redirect")   || "/dashboard"
+    const redirect   = search.get("redirect")   || "/"
     const errorMsg   = search.get("error")      || ""
     const prefillId  = search.get("identifier") || "budibeni"
 

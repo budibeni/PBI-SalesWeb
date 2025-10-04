@@ -72,7 +72,7 @@ export async function middleware(req) {
 
     // 0) Public path → bebas
     if (isPublicPath(pathname)) {
-        // khusus /login: bila ada token valid & bukan non-aktif → langsung ke dashboard
+        // khusus /login: bila ada token valid & bukan non-aktif → langsung ke home
         if (pathname.startsWith("/login") && token) {
             try {
                 const { payload: p } = await jwtVerify(token, secret)
@@ -83,7 +83,7 @@ export async function middleware(req) {
                     res.cookies.set("session", "", { path: "/", expires: new Date(0) })
                     return res
                 }
-                return NextResponse.redirect(new URL("/dashboard", req.url))
+                return NextResponse.redirect(new URL("/", req.url))
             } catch {
                 // token invalid → lanjut ke /login
             }

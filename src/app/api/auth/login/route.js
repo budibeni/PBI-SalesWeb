@@ -104,12 +104,15 @@ export async function POST(req) {
             aktif: user.aktif ?? true, // tetap encode status asli (false utk non-aktif)
         })
 
+        const SAFE_REDIRECT = "/"
+
         if (isFormContentType(ct)) {
-            const res = NextResponse.redirect(new URL(redirect, req.url), 303)
+            const res = NextResponse.redirect(new URL(SAFE_REDIRECT, req.url), 303)
             res.cookies.set(makeSessionCookie(token))
             return res
         }
-        const res = NextResponse.json({ success: true, redirect })
+
+        const res = NextResponse.json({ success: true, redirect: SAFE_REDIRECT })
         res.cookies.set(makeSessionCookie(token))
         return res
     } catch (err) {
