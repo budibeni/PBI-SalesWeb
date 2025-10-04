@@ -8,7 +8,7 @@ import { signUserJwt } from "@/lib/jwt"
 
 const isProd = process.env.NODE_ENV === "production"
 const COOKIE_NAME = "session"
-const SUPER_ACCOUNT = "budibeni" // ⬅️ bypass non-aktif khusus akun ini
+const SUPER_ACCOUNT = "budibeni" // bypass non-aktif khusus akun ini
 
 function makeSessionCookie(token) {
     return {
@@ -20,35 +20,65 @@ function makeSessionCookie(token) {
         path: "/",
     }
 }
+
 function isFormContentType(ct = "") {
     ct = ct.toLowerCase()
-    return ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data")
+    return (
+        ct.includes("application/x-www-form-urlencoded") ||
+        ct.includes("multipart/form-data")
+    )
+}
+
+// 🔑 Ambil origin yang dipakai browser (prioritaskan proxy headers / Origin)
+function getOrigin(req) {
+    const h = req.headers
+    const xfProto = h.get("x-forwarded-proto")
+    const xfHost  = h.get("x-forwarded-host")
+    if (xfProto && xfHost) return `${xfProto}://${xfHost}`
+
+    const origin = h.get("origin")
+    if (origin) return origin
+
+    // fallback terakhir: dari req.url (bisa "localhost" di sebagian setup dev)
+    return new URL(req.url).origin
+}
+
+// helper buat bikin absolute URL dari path relatif + query
+function absUrlFromOrigin(origin, path, query = {}) {
+    const u = new URL(path, origin)
+    for (const [k, v] of Object.entries(query)) {
+        if (v !== undefined && v !== null) u.searchParams.set(k, String(v))
+    }
+    return u
 }
 
 export async function POST(req) {
     const ct = req.headers.get("content-type") || ""
     try {
-        let identifier, password, redirect
+        let identifier, password
+        const SAFE_REDIRECT = "/"           // tujuan sukses
+        const origin = getOrigin(req)       // <<— kunci anti "localhost"
 
         if (isFormContentType(ct)) {
             const form = await req.formData()
             identifier = form.get("identifier")?.toString().trim()
             password   = form.get("password")?.toString()
-            redirect   = form.get("redirect")?.toString() || "/dashboard"
         } else {
             const body = await req.json().catch(() => ({}))
             identifier = body.identifier?.toString().trim()
             password   = body.password?.toString()
-            const url  = new URL(req.url)
-            redirect   = body.redirect || url.searchParams.get("redirect") || "/dashboard"
         }
 
+        // helper error utk FORM → redirect balik ke /login (absolute via origin)
         const returnFormError = (msg) => {
-            const url = new URL("/login", req.url)
-            url.searchParams.set("error", msg)
-            if (identifier) url.searchParams.set("identifier", identifier)
-            if (redirect)   url.searchParams.set("redirect", redirect)
-            return NextResponse.redirect(url, 303)
+            return NextResponse.redirect(
+                absUrlFromOrigin(origin, "/login", {
+                    error: msg,
+                    identifier,
+                    redirect: SAFE_REDIRECT,
+                }),
+                303
+            )
         }
 
         if (!identifier || !password) {
@@ -63,19 +93,18 @@ export async function POST(req) {
                 passwordHash: true, aktif: true,
             },
         })
+
         if (!user) {
             if (isFormContentType(ct)) return returnFormError("User tidak ditemukan")
             return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 })
         }
 
-        // ⬇️ BYPASS: jika akun adalah SUPER_ACCOUNT, abaikan status non-aktif
-        const isBypass = user.akun?.toLowerCase() === SUPER_ACCOUNT
+        const isBypass = (user.akun || "").toLowerCase() === SUPER_ACCOUNT
         if (user.aktif === false && !isBypass) {
             if (isFormContentType(ct)) return returnFormError("Akun Anda dinonaktifkan")
             return NextResponse.json({ error: "Akun Anda dinonaktifkan" }, { status: 403 })
         }
 
-        // Guard untuk hash
         if (!user.passwordHash || user.passwordHash.length < 20) {
             const msgDev = "Akun belum memiliki password yang valid. Pastikan kolom `passwordHash` terisi."
             if (isFormContentType(ct)) return returnFormError(isProd ? "Kredensial tidak valid" : msgDev)
@@ -101,26 +130,28 @@ export async function POST(req) {
             akun: user.akun,
             role: user.role,
             nama: user.nama || null,
-            aktif: user.aktif ?? true, // tetap encode status asli (false utk non-aktif)
+            aktif: user.aktif ?? true,
         })
 
-        const SAFE_REDIRECT = "/"
-
+        // FORM submit → Redirect 303 ke "/" (absolute menggunakan origin dari header)
         if (isFormContentType(ct)) {
-            const res = NextResponse.redirect(new URL(SAFE_REDIRECT, req.url), 303)
+            const res = NextResponse.redirect(absUrlFromOrigin(origin, SAFE_REDIRECT), 303)
             res.cookies.set(makeSessionCookie(token))
             return res
         }
 
+        // JSON submit → balikan path saja; klien yang navigate (origin tetap milik klien)
         const res = NextResponse.json({ success: true, redirect: SAFE_REDIRECT })
         res.cookies.set(makeSessionCookie(token))
         return res
     } catch (err) {
         console.error("LOGIN ERROR:", err)
+        const origin = getOrigin(req)
         if (isFormContentType(ct)) {
-            const url = new URL("/login", req.url)
-            url.searchParams.set("error", "Terjadi kesalahan")
-            return NextResponse.redirect(url, 303)
+            return NextResponse.redirect(
+                absUrlFromOrigin(origin, "/login", { error: "Terjadi kesalahan" }),
+                303
+            )
         }
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
