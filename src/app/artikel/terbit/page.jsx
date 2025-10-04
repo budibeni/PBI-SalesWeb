@@ -199,28 +199,67 @@ export default function PublishedArticlesSearch() {
                         </Card>
                     )}
 
-                    {/* Pager */}
-                    <div className="mt-6 flex items-center justify-between">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => goPage(Math.max(1, page - 1))}
-                            disabled={page <= 1 || loading}
-                        >
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Sebelumnya
-                        </Button>
-                        <div className="text-xs text-muted-foreground">
-                            Halaman {page} dari {totalPages}
+                    {/* Pager (responsif) */}
+                    <div className="mt-6">
+                        {/* Mobile: grid 3 kolom, ikon saja */}
+                        <div className="grid grid-cols-3 items-center sm:hidden">
+                            <div className="justify-self-start">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => goPage(Math.max(1, page - 1))}
+                                    disabled={page <= 1 || loading}
+                                    aria-label="Sebelumnya"
+                                    title="Sebelumnya"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                            </div>
+
+                            <div className="text-center text-xs text-muted-foreground">
+                                Hal {page}/{totalPages}
+                            </div>
+
+                            <div className="justify-self-end">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => goPage(Math.min(totalPages, page + 1))}
+                                    disabled={page >= totalPages || loading}
+                                    aria-label="Selanjutnya"
+                                    title="Selanjutnya"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => goPage(Math.min(totalPages, page + 1))}
-                            disabled={page >= totalPages || loading}
-                        >
-                            Selanjutnya <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
+
+                        {/* ≥sm: tombol berteks + indikator di tengah/kanan */}
+                        <div className="hidden sm:flex items-center justify-between">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => goPage(Math.max(1, page - 1))}
+                                disabled={page <= 1 || loading}
+                            >
+                                <ChevronLeft className="h-4 w-4 mr-1" /> Sebelumnya
+                            </Button>
+
+                            <div className="text-xs text-muted-foreground">
+                                Halaman {page} dari {totalPages}
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => goPage(Math.min(totalPages, page + 1))}
+                                disabled={page >= totalPages || loading}
+                            >
+                                Selanjutnya <ChevronRight className="h-4 w-4 ml-1" />
+                            </Button>
+                        </div>
                     </div>
+
                 </div>
             </main>
         </div>
