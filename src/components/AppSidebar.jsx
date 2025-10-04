@@ -92,7 +92,7 @@ export default function AppSidebarLayout({ children, user }) {
         <SidebarProvider>
             <Sidebar className="bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
                 <SidebarHeader>
-                    <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center justify-between px-2 pt-1">
                         <div className="font-bold">PBI SalesGo</div>
                     </div>
                 </SidebarHeader>

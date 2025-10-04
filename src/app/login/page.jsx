@@ -26,7 +26,7 @@ export default function LoginPage() {
     return (
         <div className="min-h-dvh grid place-items-center bg-background">
             <div className="absolute top-5 left-1/2 -translate-x-1/2">
-                <div className="flex items-center gap-3 rounded-full bg-card px-4 py-2 shadow-sm ring-1 ring-border">
+                <div className="flex items-center gap-3 rounded-full bg-card px-4 py-2  ring-1 ring-border">
           <span className="grid size-7 place-items-center rounded-xl bg-foreground text-background">
             <ShieldCheck className="size-4" />
           </span>
@@ -35,7 +35,7 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            <Card className="w-[92%] max-w-sm shadow-lg">
+            <Card className="w-[92%] max-w-sm">
                 <CardHeader className="text-center">
                     <CardTitle className="text-xl">Selamat Datang</CardTitle>
                     <CardDescription>
@@ -107,22 +107,13 @@ export default function LoginPage() {
                         <Button type="submit" className="w-full">Masuk</Button>
                     </form>
 
-                    <div className="my-4"><Separator /></div>
 
-                    {/*/!* Hanya tombol Baca Artikel *!/*/}
-                    {/*<div className="flex justify-end">*/}
-                    {/*    <Button asChild variant="outline" size="sm">*/}
-                    {/*        <Link href="/artikel/terbit" prefetch={false} title="Kenal lebih dekat dengan kami" aria-label="Kenal Lebih Dekat">*/}
-                    {/*            <FileSearch className="h-4 w-4 mr-2" />*/}
-                    {/*            Cari tau*/}
-                    {/*        </Link>*/}
-                    {/*    </Button>*/}
-                    {/*</div>*/}
+
                 </CardContent>
 
                 <CardFooter className="flex justify-between text-xs text-muted-foreground">
                     <span>© {new Date().getFullYear()} Bensoft SalesGo</span>
-                    <Button asChild variant="secondary" size="sm">
+                    <Button asChild variant="secondary" size="sm" >
                         <Link href="/artikel/terbit" prefetch={false} title="Kenal lebih dekat dengan kami" aria-label="Kenal Lebih Dekat">
                             <BookOpenText className="h-4 w-4 mr-1" />
                             Pelajari
