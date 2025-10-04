@@ -26,6 +26,19 @@ model TbUser {
   diubahTanggal DateTime @updatedAt
 }
 
+model TbArtikel {
+  id            String   @id @default(cuid())
+  judul         String
+  artikel       String
+  terbit        Boolean  @default(false)
+  dibuatOleh    String?  @map("dibuat_oleh")
+  dibuatTanggal DateTime @default(now()) @map("dibuat_tanggal")
+  diubahOleh    String?  @map("diubah_oleh")
+  diubahTanggal DateTime @updatedAt @map("diubah_tanggal")
+
+  @@map("tb_artikel")
+}
+
 model TbMasterItem {
   id            String   @id @default(cuid())
   kodeItem      String   @unique

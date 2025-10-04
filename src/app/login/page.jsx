@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
 import {
     Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter
 } from "@/components/ui/card"
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { User, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react"
+import {User, Lock, Eye, EyeOff, ShieldCheck,  BookOpenText} from "lucide-react"
 
 export default function LoginPage() {
     const search = useSearchParams()
@@ -23,9 +24,7 @@ export default function LoginPage() {
     useEffect(() => { idRef.current?.focus() }, [])
 
     return (
-        // ⬇️ Tanpa gradient: latar polos sesuai tema
         <div className="min-h-dvh grid place-items-center bg-background">
-            {/* brand chip (kecil) */}
             <div className="absolute top-5 left-1/2 -translate-x-1/2">
                 <div className="flex items-center gap-3 rounded-full bg-card px-4 py-2 shadow-sm ring-1 ring-border">
           <span className="grid size-7 place-items-center rounded-xl bg-foreground text-background">
@@ -36,20 +35,20 @@ export default function LoginPage() {
                 </div>
             </div>
 
-            {/* login card */}
             <Card className="w-[92%] max-w-sm shadow-lg">
-                <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl">Masuk</CardTitle>
-                    <CardDescription>Gunakan akun Anda untuk melanjutkan.</CardDescription>
+                <CardHeader className="text-center">
+                    <CardTitle className="text-xl">Selamat Datang</CardTitle>
+                    <CardDescription>
+                        Silahkan login untuk masuk ke dalam sistem
+                    </CardDescription>
                 </CardHeader>
 
                 <CardContent>
-                    {/* alert error (jika ada) */}
                     {errorMsg && (
                         <div
                             role="alert"
                             className="mb-3 rounded-lg border border-red-200/60 bg-red-50 px-3 py-2 text-sm text-red-700
-                         dark:border-red-900/40 dark:bg-red-900/30 dark:text-red-200"
+              dark:border-red-900/40 dark:bg-red-900/30 dark:text-red-200"
                         >
                             {errorMsg}
                         </div>
@@ -58,7 +57,6 @@ export default function LoginPage() {
                     <form action="/api/auth/login" method="post" className="grid gap-4">
                         <input type="hidden" name="redirect" value={redirect} />
 
-                        {/* identifier */}
                         <div className="grid gap-1.5">
                             <Label htmlFor="identifier">Email atau Akun</Label>
                             <div className="relative">
@@ -78,7 +76,6 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        {/* password */}
                         <div className="grid gap-1.5">
                             <Label htmlFor="password">Kata Sandi</Label>
                             <div className="relative">
@@ -111,14 +108,26 @@ export default function LoginPage() {
                     </form>
 
                     <div className="my-4"><Separator /></div>
-                    <p className="text-xs text-muted-foreground">
-                        Setelah sukses, Anda akan diarahkan ke <code>{redirect}</code>.
-                    </p>
+
+                    {/*/!* Hanya tombol Baca Artikel *!/*/}
+                    {/*<div className="flex justify-end">*/}
+                    {/*    <Button asChild variant="outline" size="sm">*/}
+                    {/*        <Link href="/artikel/terbit" prefetch={false} title="Kenal lebih dekat dengan kami" aria-label="Kenal Lebih Dekat">*/}
+                    {/*            <FileSearch className="h-4 w-4 mr-2" />*/}
+                    {/*            Cari tau*/}
+                    {/*        </Link>*/}
+                    {/*    </Button>*/}
+                    {/*</div>*/}
                 </CardContent>
 
                 <CardFooter className="flex justify-between text-xs text-muted-foreground">
                     <span>© {new Date().getFullYear()} Bensoft SalesGo</span>
-                    <span>Kebijakan Privasi</span>
+                    <Button asChild variant="secondary" size="sm">
+                        <Link href="/artikel/terbit" prefetch={false} title="Kenal lebih dekat dengan kami" aria-label="Kenal Lebih Dekat">
+                            <BookOpenText className="h-4 w-4 mr-1" />
+                            Pelajari
+                        </Link>
+                    </Button>
                 </CardFooter>
             </Card>
         </div>

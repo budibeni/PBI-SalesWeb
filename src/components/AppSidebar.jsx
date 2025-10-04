@@ -57,17 +57,20 @@ export default function AppSidebarLayout({ children, user }) {
     const displayName =
         (me?.nama && me.nama.trim()) || me?.akun || me?.email || "Pengguna"
 
+
     // policy akses:
-    // - admin lihat semua
-    // - saat loading (me belum ada/akses belum ada) -> tampilkan agar tidak blank
-    // - setelah akses siap -> wajib true
+    // - item public → selalu boleh
+    // - admin → boleh semua
+    // - loading user → tampilkan agar tidak blank
     const hasAksesInfo = !!(me && typeof me.akses === "object")
-    const can = (id) => {
-        if (!me) return true
-        if (me.role === "admin") return true
-        if (!hasAksesInfo) return true
-        return !!me.akses?.[id]
+    const can = (item) => {
+       if (item.public) return true
+       if (!me) return true
+       if (me.role === "admin") return true
+       if (!hasAksesInfo) return true
+       return !!me.akses?.[item.id]
     }
+
 
     const isActive = (href) =>
         pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
@@ -96,7 +99,7 @@ export default function AppSidebarLayout({ children, user }) {
 
                 <SidebarContent>
                     {Object.entries(sectionGroups).map(([section, items]) => {
-                        const visible = items.filter(({ id }) => can(id))
+                        const visible = items.filter((it) => can(it))
                         if (visible.length === 0) return null
                         return (
                             <div key={section} className="space-y-1 mt-2">
@@ -130,6 +133,7 @@ export default function AppSidebarLayout({ children, user }) {
                     {displayName}
                   </span>
                                 </Button>
+
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent side="top" align="start" className="w-52">

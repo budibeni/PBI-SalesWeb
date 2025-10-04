@@ -7,7 +7,8 @@ import {
     Crosshair,
     FileText,
     Box,
-    AppWindow, // default icon
+    AppWindow,
+    Newspaper,
 } from "lucide-react"
 
 const DEFAULT_ICON = AppWindow
@@ -17,6 +18,7 @@ const ICONS = {
     kalkulator: Calculator,
     target: Crosshair,
     "komisi-simulasi": SquarePercent,
+    "artikel-terbit" :Newspaper,
     dokumen: FileText,
     bantuan: UserPen,
     users: Box,
