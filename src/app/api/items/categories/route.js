@@ -11,9 +11,7 @@ export async function GET() {
             distinct: ["kategori"],
             orderBy: { kategori: "asc" },
         })
-        const categories = rows
-            .map((r) => r.kategori?.trim())
-            .filter(Boolean)
+        const categories = rows.map(r => r.kategori?.trim()).filter(Boolean)
         return NextResponse.json({ categories })
     } catch (e) {
         console.error(e)

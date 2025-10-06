@@ -13,7 +13,7 @@ export async function GET(req) {
     try {
         const url = new URL(req.url)
         const q = (url.searchParams.get("q") || "").trim()
-        const cat = (url.searchParams.get("cat") || "").trim() // ⬅️ NEW
+        const cat = (url.searchParams.get("cat") || "").trim()
         const page = Math.max(1, Number(url.searchParams.get("page") || 1))
         const pageSize = Math.min(50, Math.max(1, Number(url.searchParams.get("pageSize") || 10)))
         const skip = (page - 1) * pageSize
@@ -29,7 +29,7 @@ export async function GET(req) {
                     ],
                 }
                 : {}),
-            ...(cat ? { kategori: { equals: cat } } : {}), // ⬅️ NEW
+            ...(cat ? { kategori: { equals: cat } } : {}),
         }
 
         const [rows, total] = await Promise.all([
@@ -59,18 +59,28 @@ export async function POST(req) {
     try {
         const body = await req.json()
         const data = {
+            // umum
             kodeItem: String(body.kodeItem || "").trim(),
             namaItem: String(body.namaItem || "").trim(),
             deskripsi: body.deskripsi ?? null,
-            harga: numOrNull(body.harga),
-            satuan: String(body.satuan || "").trim(),
-            faktorKonversi: numOrNull(body.faktorKonversi),
-            satuanKonversi: body.satuanKonversi ?? null,
-            nilaiCakupan: numOrNull(body.nilaiCakupan),
-            satuanCakupan: body.satuanCakupan ?? null,
-            jenisCakupan: body.jenisCakupan ?? null,
             kategori: body.kategori ?? null,
             merek: body.merek ?? null,
+            harga: Number(body.harga ?? 0),
+
+            // konversi/kalkulator
+            satuan: String(body.satuan || "").trim(),
+            nilaiSatuan: numOrNull(body.nilaiSatuan),
+            nilaiKonversi: numOrNull(body.nilaiKonversi),
+            satuanKonversi: body.satuanKonversi ?? null,
+
+            // penggunaan
+            nilaiPenggunaan: numOrNull(body.nilaiPenggunaan),
+            satuanPenggunaan: body.satuanPenggunaan ?? null,
+            deskripsiPenggunaan: body.deskripsiPenggunaan ?? null,
+
+            // komisi
+            persentaseKomisi: numOrNull(body.persentaseKomisi),
+
             dibuatOleh: body.dibuatOleh ?? "system",
         }
 
@@ -81,7 +91,7 @@ export async function POST(req) {
         const created = await prisma.tbMasterItem.create({ data })
         return NextResponse.json(created, { status: 201 })
     } catch (e) {
-        console.error("POST /api/items failed:", e?.message, e)
+        console.error("POST /api/items failed:", e)
         return NextResponse.json({ error: e?.message || "Gagal membuat item" }, { status: 500 })
     }
 }

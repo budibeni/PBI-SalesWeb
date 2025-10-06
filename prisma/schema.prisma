@@ -40,21 +40,23 @@ model TbArtikel {
 }
 
 model TbMasterItem {
-  id             String   @id @default(cuid())
-  kodeItem       String   @unique
-  namaItem       String
-  deskripsi      String?
-  harga          Int
-  satuan         String
-  kategori       String?
-  merek          String?
-  faktorKonversi Float?
-  satuanKonversi String?
-  nilaiCakupan   Float?
-  satuanCakupan  String?
-  jenisCakupan   String?
-  dibuatOleh     String?
-  dibuatTanggal  DateTime @default(now())
-  diubahOleh     String?
-  diubahTanggal  DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  kodeItem            String   @unique
+  namaItem            String
+  deskripsi           String?
+  kategori            String?
+  merek               String?
+  harga               Int?
+  satuan              String // m3
+  nilaiSatuan         Float? // contoh: 0.75
+  nilaiKonversi       Float? // 84 pcs
+  satuanKonversi      String? // pcs
+  nilaiPenggunaan     Float? // 10 = 0.75 (m3)
+  satuanPenggunaan    String? //m2
+  deskripsiPenggunaan String? //Luas Dinding (m²)
+  persentaseKomisi    Float?
+  dibuatOleh          String?
+  dibuatTanggal       DateTime @default(now())
+  diubahOleh          String?
+  diubahTanggal       DateTime @updatedAt
 }

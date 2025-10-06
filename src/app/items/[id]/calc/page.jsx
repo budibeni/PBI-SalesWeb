@@ -1,4 +1,3 @@
-// app/items/[id]/calc/page.js
 "use client"
 
 import { useEffect, useState } from "react"
@@ -22,11 +21,12 @@ export default function EditCalcPage() {
             const j = await res.json()
             setF({
                 satuan: j.satuan || "",
+                nilaiSatuan: j.nilaiSatuan ?? "",
+                nilaiKonversi: j.nilaiKonversi ?? "",
                 satuanKonversi: j.satuanKonversi || "",
-                faktorKonversi: j.faktorKonversi ?? "",
-                nilaiCakupan: j.nilaiCakupan ?? "",
-                satuanCakupan: j.satuanCakupan || "",
-                jenisCakupan: j.jenisCakupan || "",
+                nilaiPenggunaan: j.nilaiPenggunaan ?? "",
+                satuanPenggunaan: j.satuanPenggunaan || "",
+                deskripsiPenggunaan: j.deskripsiPenggunaan || "",
             })
         })()
     }, [id])
@@ -56,25 +56,29 @@ export default function EditCalcPage() {
             <Card className="mx-auto max-w-3xl">
                 <CardHeader className="flex items-center justify-between">
                     <CardTitle>Edit Item — Kalkulator</CardTitle>
-                    <Button asChild variant="outline"><Link href={`/items/${id}/edit`}>Pindah: Umum</Link></Button>
+                    <div className="flex gap-2">
+                        <Button asChild variant="outline"><Link href={`/items/${id}/edit`}>Pindah: Umum</Link></Button>
+                        <Button asChild variant="outline"><Link href={`/items/${id}/commission`}>Pindah: Komisi</Link></Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={submit} className="space-y-6">
                         <div className="space-y-2">
                             <div className="font-medium">Konversi</div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                 <Field label="Satuan (base)"><Input value={f.satuan} onChange={(e)=>set("satuan", e.target.value)} /></Field>
+                                <Field label="Nilai Satuan"><Input type="number" step="any" value={f.nilaiSatuan} onChange={(e)=>set("nilaiSatuan", e.target.value)} /></Field>
+                                <Field label="Nilai Konversi"><Input type="number" step="any" value={f.nilaiKonversi} onChange={(e)=>set("nilaiKonversi", e.target.value)} /></Field>
                                 <Field label="Satuan Konversi"><Input value={f.satuanKonversi} onChange={(e)=>set("satuanKonversi", e.target.value)} /></Field>
-                                <Field label="Faktor Konversi"><Input type="number" step="any" value={f.faktorKonversi} onChange={(e)=>set("faktorKonversi", e.target.value)} /></Field>
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <div className="font-medium">Cakupan</div>
+                            <div className="font-medium">Penggunaan</div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <Field label="Nilai Cakupan"><Input type="number" step="any" value={f.nilaiCakupan} onChange={(e)=>set("nilaiCakupan", e.target.value)} /></Field>
-                                <Field label="Satuan Cakupan"><Input value={f.satuanCakupan} onChange={(e)=>set("satuanCakupan", e.target.value)} /></Field>
-                                <Field label="Jenis Cakupan"><Input value={f.jenisCakupan} onChange={(e)=>set("jenisCakupan", e.target.value)} /></Field>
+                                <Field label="Nilai Penggunaan"><Input type="number" step="any" value={f.nilaiPenggunaan} onChange={(e)=>set("nilaiPenggunaan", e.target.value)} /></Field>
+                                <Field label="Satuan Penggunaan"><Input value={f.satuanPenggunaan} onChange={(e)=>set("satuanPenggunaan", e.target.value)} /></Field>
+                                <Field label="Deskripsi Penggunaan"><Input value={f.deskripsiPenggunaan} onChange={(e)=>set("deskripsiPenggunaan", e.target.value)} /></Field>
                             </div>
                         </div>
 

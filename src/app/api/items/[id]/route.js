@@ -1,4 +1,3 @@
-// app/api/items/[id]/route.js
 export const runtime = "nodejs"
 
 import prisma from "@/lib/db"
@@ -25,18 +24,27 @@ export async function PATCH(req, { params }) {
     try {
         const body = await req.json()
         const data = {}
+
+        // umum
         if (body.kodeItem !== undefined) data.kodeItem = String(body.kodeItem).trim()
         if (body.namaItem !== undefined) data.namaItem = String(body.namaItem).trim()
         if (body.deskripsi !== undefined) data.deskripsi = body.deskripsi ?? null
-        if (body.harga !== undefined) data.harga = numOrNull(body.harga)
-        if (body.satuan !== undefined) data.satuan = String(body.satuan).trim()
-        if (body.faktorKonversi !== undefined) data.faktorKonversi = numOrNull(body.faktorKonversi)
-        if (body.satuanKonversi !== undefined) data.satuanKonversi = body.satuanKonversi ?? null
-        if (body.nilaiCakupan !== undefined) data.nilaiCakupan = numOrNull(body.nilaiCakupan)
-        if (body.satuanCakupan !== undefined) data.satuanCakupan = body.satuanCakupan ?? null
-        if (body.jenisCakupan !== undefined) data.jenisCakupan = body.jenisCakupan ?? null
         if (body.kategori !== undefined) data.kategori = body.kategori ?? null
         if (body.merek !== undefined) data.merek = body.merek ?? null
+        if (body.harga !== undefined) data.harga = Number(body.harga ?? 0)
+        if (body.persentaseKomisi !== undefined) data.persentaseKomisi = numOrNull(body.persentaseKomisi)
+
+        // kalkulator/konversi
+        if (body.satuan !== undefined) data.satuan = String(body.satuan).trim()
+        if (body.nilaiSatuan !== undefined) data.nilaiSatuan = numOrNull(body.nilaiSatuan)
+        if (body.nilaiKonversi !== undefined) data.nilaiKonversi = numOrNull(body.nilaiKonversi)
+        if (body.satuanKonversi !== undefined) data.satuanKonversi = body.satuanKonversi ?? null
+
+        // penggunaan
+        if (body.nilaiPenggunaan !== undefined) data.nilaiPenggunaan = numOrNull(body.nilaiPenggunaan)
+        if (body.satuanPenggunaan !== undefined) data.satuanPenggunaan = body.satuanPenggunaan ?? null
+        if (body.deskripsiPenggunaan !== undefined) data.deskripsiPenggunaan = body.deskripsiPenggunaan ?? null
+
         if (body.diubahOleh !== undefined) data.diubahOleh = body.diubahOleh ?? "system"
 
         const updated = await prisma.tbMasterItem.update({
