@@ -40,16 +40,21 @@ model TbArtikel {
 }
 
 model TbMasterItem {
-  id            String   @id @default(cuid())
-  kodeItem      String   @unique
-  namaItem      String
-  deskripsi     String?
-  harga         Int
-  satuan        String
-  kategori      String?
-  merek         String?
-  dibuatOleh    String?
-  dibuatTanggal DateTime @default(now())
-  diubahOleh    String?
-  diubahTanggal DateTime @updatedAt
+  id             String   @id @default(cuid())
+  kodeItem       String   @unique
+  namaItem       String
+  deskripsi      String?
+  harga          Int
+  satuan         String
+  kategori       String?
+  merek          String?
+  faktorKonversi Float?
+  satuanKonversi String?
+  nilaiCakupan   Float?
+  satuanCakupan  String?
+  jenisCakupan   String?
+  dibuatOleh     String?
+  dibuatTanggal  DateTime @default(now())
+  diubahOleh     String?
+  diubahTanggal  DateTime @updatedAt
 }

@@ -13,6 +13,7 @@ export const ACCESS_ITEMS = [
     { id: "artikel-terbit",   href: "/artikel/terbit",   label: "Baca Artikel",      section: "Menu", public: true },
 
     // 🔒 ADMIN/PROTECTED
+    { id: "items",          href: "/items",          label: "Items",           section: "Master" },
     { id: "artikel",          href: "/artikel",          label: "Artikel",           section: "Master" },
     { id: "bantuan",          href: "/bantuan",          label: "Bantuan",           section: "Lainnya"},
     { id: "users",            href: "/users",            label: "Users",             section: "Lainnya" },
