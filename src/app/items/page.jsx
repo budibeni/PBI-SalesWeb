@@ -22,10 +22,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-    Plus, Search as SearchIcon, Trash2, MoreHorizontal, Pencil, Calculator, Percent, SlidersHorizontal,
+    Plus, Search as SearchIcon, Trash2, MoreHorizontal, Pencil, Calculator, Percent,
 } from "lucide-react"
 
 const CAT_ALL = "__ALL__"
+const PAGE_SIZES = ["10","25","50","100","500","1000"]
 
 export default function ItemsPage() {
     const sp = useSearchParams()
@@ -34,9 +35,11 @@ export default function ItemsPage() {
     const urlQ = sp.get("q") || ""
     const urlPage = Math.max(1, Number(sp.get("page") || 1))
     const urlCat = sp.get("cat") || ""
+    const urlSize = sp.get("size") || PAGE_SIZES[0] // default "10"
 
     const [q, setQ] = useState(urlQ)
     const [cat, setCat] = useState(urlCat || CAT_ALL)
+    const [size, setSize] = useState(urlSize)
     const [cats, setCats] = useState([])
 
     const [data, setData] = useState({ items: [], total: 0, page: urlPage, totalPages: 1 })
@@ -74,7 +77,8 @@ export default function ItemsPage() {
     useEffect(() => {
         setQ(urlQ)
         setCat(urlCat || CAT_ALL)
-    }, [urlQ, urlCat])
+        setSize(urlSize || PAGE_SIZES[0])
+    }, [urlQ, urlCat, urlSize])
 
     // categories sekali
     useEffect(() => {
@@ -96,7 +100,7 @@ export default function ItemsPage() {
             if (urlQ.trim()) p.set("q", urlQ.trim())
             if (urlCat.trim()) p.set("cat", urlCat.trim())
             p.set("page", String(urlPage))
-            p.set("pageSize", "10")
+            p.set("pageSize", String(urlSize))
             const res = await fetch(`/api/items?${p}`, { cache: "no-store" })
             const json = await res.json()
             setData({
@@ -112,25 +116,31 @@ export default function ItemsPage() {
             setLoading(false)
         }
     }
-    useEffect(() => { load() }, [urlQ, urlPage, urlCat]) // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { load() }, [urlQ, urlPage, urlCat, urlSize]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    function pushParams(nextQ, nextCat, nextPage = 1) {
+    function pushParams(nextQ, nextCat, nextSize, nextPage = 1) {
         const p = new URLSearchParams()
         const qq = String(nextQ || "").trim()
         const cc = nextCat === CAT_ALL ? "" : String(nextCat || "").trim()
+        const ss = PAGE_SIZES.includes(String(nextSize)) ? String(nextSize) : PAGE_SIZES[0]
         if (qq) p.set("q", qq)
         if (cc) p.set("cat", cc)
+        p.set("size", ss)
         p.set("page", String(nextPage))
         router.replace(`/items?${p.toString()}`)
     }
     function submit(e) {
         e.preventDefault()
-        pushParams(q, cat, 1)
+        pushParams(q, cat, size, 1)
     }
-    const go = (p) => { pushParams(urlQ, cat, p) }
+    const go = (p) => { pushParams(urlQ, cat, size, p) }
     function onChangeCategory(val) {
         setCat(val)
-        pushParams(q, val, 1)
+        pushParams(q, val, size, 1)
+    }
+    function onChangeSize(val) {
+        setSize(val)
+        pushParams(q, cat, val, 1)
     }
 
     return (
@@ -139,14 +149,12 @@ export default function ItemsPage() {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-xl">Master Item</CardTitle>
                     <div className="flex items-center gap-2">
-                        {/* Bulk kalkulator terpisah */}
                         <BulkCalcDialog
                             disabled={selected.size === 0}
                             count={selected.size}
                             ids={[...selected]}
                             onDone={async () => { await load() }}
                         />
-                        {/* Bulk komisi terpisah */}
                         <BulkCommissionDialog
                             disabled={selected.size === 0}
                             count={selected.size}
@@ -160,7 +168,7 @@ export default function ItemsPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                    {/* Search + Kategori */}
+                    {/* Search + Kategori + PageSize */}
                     <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                         <div className="relative w-full sm:w-80">
                             <Input
@@ -193,6 +201,17 @@ export default function ItemsPage() {
                             </SelectContent>
                         </Select>
 
+                        <Select value={size} onValueChange={onChangeSize}>
+                            <SelectTrigger className="w-full sm:w-40">
+                                <SelectValue placeholder="Per halaman" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {PAGE_SIZES.map((s) => (
+                                    <SelectItem key={s} value={s}>{s} / halaman</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
                         <Button type="submit" className="sm:hidden">Terapkan</Button>
                     </form>
 
@@ -200,7 +219,7 @@ export default function ItemsPage() {
                     <div className="text-xs text-muted-foreground">
                         {loading
                             ? "Memuat…"
-                            : `Menampilkan ${items.length} dari ${total} • Hal ${page}/${totalPages}${urlCat ? ` • Kategori: ${urlCat}` : ""} • Terpilih ${selected.size}`}
+                            : `Menampilkan ${items.length} dari ${total} • Hal ${page}/${totalPages}${urlCat ? ` • Kategori: ${urlCat}` : ""} • ${size}/hal • Terpilih ${selected.size}`}
                     </div>
 
                     <div className="rounded-md border overflow-x-auto">
@@ -353,19 +372,13 @@ function DeleteDialog({ id, onDeleted }) {
     )
 }
 
-/** ======== BULK DIALOGS ======== **/
-
+/** ======== BULK DIALOGS (tetap) ======== **/
 function BulkCalcDialog({ disabled, ids, count, onDone }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [f, setF] = useState({
-        satuan: "",
-        nilaiSatuan: "",
-        nilaiKonversi: "",
-        satuanKonversi: "",
-        nilaiPenggunaan: "",
-        satuanPenggunaan: "",
-        deskripsiPenggunaan: "",
+        satuan: "", nilaiSatuan: "", nilaiKonversi: "", satuanKonversi: "",
+        nilaiPenggunaan: "", satuanPenggunaan: "", deskripsiPenggunaan: "",
     })
     const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
 
@@ -373,7 +386,7 @@ function BulkCalcDialog({ disabled, ids, count, onDone }) {
         e?.preventDefault?.()
         setBusy(true)
         try {
-            const payload = { ids, ...f } // hanya field kalkulator/penggunaan
+            const payload = { ids, ...f }
             const res = await fetch("/api/items/bulk", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -383,10 +396,7 @@ function BulkCalcDialog({ disabled, ids, count, onDone }) {
             if (!res.ok) { alert(j.error || "Bulk kalkulator gagal"); return }
             setOpen(false)
             onDone?.()
-            setF({
-                satuan: "", nilaiSatuan: "", nilaiKonversi: "", satuanKonversi: "",
-                nilaiPenggunaan: "", satuanPenggunaan: "", deskripsiPenggunaan: "",
-            })
+            setF({ satuan: "", nilaiSatuan: "", nilaiKonversi: "", satuanKonversi: "", nilaiPenggunaan: "", satuanPenggunaan: "", deskripsiPenggunaan: "" })
         } finally { setBusy(false) }
     }
 
@@ -399,42 +409,22 @@ function BulkCalcDialog({ disabled, ids, count, onDone }) {
                 </Button>
             </DialogTrigger>
             <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Bulk Edit Kalkulator / Penggunaan</DialogTitle>
-                </DialogHeader>
-
+                <DialogHeader><DialogTitle>Bulk Edit Kalkulator / Penggunaan</DialogTitle></DialogHeader>
                 <form onSubmit={submit} className="space-y-4">
                     <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
                         Menerapkan perubahan ke <b>{count}</b> item terpilih. Field kosong akan <b>diabaikan</b>.
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                        <FieldMini label="Satuan (base)">
-                            <Input value={f.satuan} onChange={(e)=>set("satuan", e.target.value)} placeholder="cth: M3" />
-                        </FieldMini>
-                        <FieldMini label="Nilai Satuan">
-                            <Input type="number" step="any" value={f.nilaiSatuan} onChange={(e)=>set("nilaiSatuan", e.target.value)} placeholder="cth: 0.75" />
-                        </FieldMini>
-                        <FieldMini label="Nilai Konversi">
-                            <Input type="number" step="any" value={f.nilaiKonversi} onChange={(e)=>set("nilaiKonversi", e.target.value)} placeholder="cth: 84" />
-                        </FieldMini>
-                        <FieldMini label="Satuan Konversi">
-                            <Input value={f.satuanKonversi} onChange={(e)=>set("satuanKonversi", e.target.value)} placeholder="cth: PCS" />
-                        </FieldMini>
+                        <FieldMini label="Satuan (base)"><Input value={f.satuan} onChange={(e)=>set("satuan", e.target.value)} placeholder="cth: M3" /></FieldMini>
+                        <FieldMini label="Nilai Satuan"><Input type="number" step="any" value={f.nilaiSatuan} onChange={(e)=>set("nilaiSatuan", e.target.value)} placeholder="cth: 0.75" /></FieldMini>
+                        <FieldMini label="Nilai Konversi"><Input type="number" step="any" value={f.nilaiKonversi} onChange={(e)=>set("nilaiKonversi", e.target.value)} placeholder="cth: 84" /></FieldMini>
+                        <FieldMini label="Satuan Konversi"><Input value={f.satuanKonversi} onChange={(e)=>set("satuanKonversi", e.target.value)} placeholder="cth: PCS" /></FieldMini>
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <FieldMini label="Nilai Penggunaan">
-                            <Input type="number" step="any" value={f.nilaiPenggunaan} onChange={(e)=>set("nilaiPenggunaan", e.target.value)} placeholder="cth: 10" />
-                        </FieldMini>
-                        <FieldMini label="Satuan Penggunaan">
-                            <Input value={f.satuanPenggunaan} onChange={(e)=>set("satuanPenggunaan", e.target.value)} placeholder="cth: M2" />
-                        </FieldMini>
-                        <FieldMini label="Deskripsi Penggunaan">
-                            <Input value={f.deskripsiPenggunaan} onChange={(e)=>set("deskripsiPenggunaan", e.target.value)} placeholder="cth: Luas Dinding (m²)" />
-                        </FieldMini>
+                        <FieldMini label="Nilai Penggunaan"><Input type="number" step="any" value={f.nilaiPenggunaan} onChange={(e)=>set("nilaiPenggunaan", e.target.value)} placeholder="cth: 10" /></FieldMini>
+                        <FieldMini label="Satuan Penggunaan"><Input value={f.satuanPenggunaan} onChange={(e)=>set("satuanPenggunaan", e.target.value)} placeholder="cth: M2" /></FieldMini>
+                        <FieldMini label="Deskripsi Penggunaan"><Input value={f.deskripsiPenggunaan} onChange={(e)=>set("deskripsiPenggunaan", e.target.value)} placeholder="cth: Luas Dinding (m²)" /></FieldMini>
                     </div>
-
                     <div className="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={()=>setOpen(false)} disabled={busy}>Batal</Button>
                         <Button type="submit" disabled={busy}>Terapkan</Button>
@@ -454,7 +444,7 @@ function BulkCommissionDialog({ disabled, ids, count, onDone }) {
         e?.preventDefault?.()
         setBusy(true)
         try {
-            const payload = { ids, persentaseKomisi: value } // hanya komisi
+            const payload = { ids, persentaseKomisi: value }
             const res = await fetch("/api/items/bulk", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -477,27 +467,16 @@ function BulkCommissionDialog({ disabled, ids, count, onDone }) {
                 </Button>
             </DialogTrigger>
             <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Bulk Edit Komisi</DialogTitle>
-                </DialogHeader>
-
+                <DialogHeader><DialogTitle>Bulk Edit Komisi</DialogTitle></DialogHeader>
                 <form onSubmit={submit} className="space-y-4">
                     <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
                         Menerapkan perubahan ke <b>{count}</b> item terpilih. Kosong = diabaikan.
                     </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <FieldMini label="Persentase Komisi (desimal)">
-                            <Input
-                                type="number"
-                                step="any"
-                                value={value}
-                                onChange={(e)=>setValue(e.target.value)}
-                                placeholder="cth: 0.004"
-                            />
+                            <Input type="number" step="any" value={value} onChange={(e)=>setValue(e.target.value)} placeholder="cth: 0.004" />
                         </FieldMini>
                     </div>
-
                     <div className="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={()=>setOpen(false)} disabled={busy}>Batal</Button>
                         <Button type="submit" disabled={busy}>Terapkan</Button>
