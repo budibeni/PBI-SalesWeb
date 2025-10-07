@@ -9,15 +9,16 @@ import {
     Box,
     AppWindow,
     Newspaper,
+    PackageSearch,
 } from "lucide-react"
 
 const DEFAULT_ICON = AppWindow
 
 const ICONS = {
-    produk: Box,
+    produk: PackageSearch,
     kalkulator: Calculator,
     target: Crosshair,
-    "komisi-simulasi": SquarePercent,
+    "komisi": SquarePercent,
     "artikel-terbit" :Newspaper,
     dokumen: FileText,
     bantuan: UserPen,

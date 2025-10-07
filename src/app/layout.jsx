@@ -4,6 +4,7 @@ import ThemeProvider from "@/components/ui/theme-provider"
 import AppSidebarLayout from "@/components/AppSidebar"
 import { getCurrentUser } from "@/lib/auth-server"
 import prisma from "@/lib/db"
+import ItemsProvider from "@/components/items/ItemsProvider";
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -34,7 +35,11 @@ export default async function RootLayout({ children }) {
         <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
             {user ? (
-                <AppSidebarLayout user={user}>{children}</AppSidebarLayout>
+                <AppSidebarLayout user={user}>
+                    <ItemsProvider>
+                    {children}
+                    </ItemsProvider>
+                </AppSidebarLayout>
             ) : (
                 children
             )}
