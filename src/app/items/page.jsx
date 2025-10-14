@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,9 +22,16 @@ import {
 } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import {
-    Plus, Search as SearchIcon, Trash2, MoreHorizontal, Pencil, Calculator,
-    Image as ImageIcon, Link as LinkIcon,
+    Plus,
+    Search as SearchIcon,
+    Trash2,
+    MoreHorizontal,
+    Pencil,
+    Calculator,
+    Image as ImageIcon,
+    Link as LinkIcon,
 } from "lucide-react"
 
 const CAT_ALL = "__ALL__"
@@ -51,6 +59,7 @@ export default function ItemsPage() {
     const page = Number(data?.page ?? 1)
     const totalPages = Number(data?.totalPages ?? 1)
 
+    // selection
     const [selected, setSelected] = useState(() => new Set())
     const allIds = useMemo(() => items.map((it) => it.id), [items])
     const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id))
@@ -72,12 +81,14 @@ export default function ItemsPage() {
         })
     }
 
+    // sync state dari URL
     useEffect(() => {
         setQ(urlQ)
         setCat(urlCat || CAT_ALL)
         setSize(urlSize || PAGE_SIZES[0])
     }, [urlQ, urlCat, urlSize])
 
+    // load kategori (opsional)
     useEffect(() => {
         let ignore = false
         ;(async () => {
@@ -106,6 +117,7 @@ export default function ItemsPage() {
                 page: Number(json?.page ?? 1),
                 totalPages: Number(json?.totalPages ?? 1),
             })
+            // bersihkan selection yang sudah tidak ada di halaman ini
             setSelected((prev) => new Set(
                 [...prev].filter((id) => Array.isArray(json?.items) && json.items.some((x) => x.id === id))
             ))
@@ -232,7 +244,7 @@ export default function ItemsPage() {
                                     <TableHead className="w-24">Satuan</TableHead>
                                     <TableHead className="w-52">Konversi</TableHead>
                                     <TableHead className="w-56">Penggunaan</TableHead>
-                                    <TableHead className="w-40">Media</TableHead>{/* <- baru */}
+                                    <TableHead className="w-40">Media</TableHead>
                                     <TableHead className="w-24 text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -266,10 +278,9 @@ export default function ItemsPage() {
                                                 ? `1 item (${it.nilaiSatuan ?? 1} ${it.satuan}) → ${it.nilaiPenggunaan} ${it.satuanPenggunaan || "?"}` : "—"}
                                         </TableCell>
 
-                                        {/* === Media column === */}
+                                        {/* Media */}
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                {/* Thumbnail */}
                                                 {it.gambarUrl ? (
                                                     <img
                                                         src={it.gambarUrl}
@@ -283,7 +294,6 @@ export default function ItemsPage() {
                                                     </div>
                                                 )}
 
-                                                {/* Link web */}
                                                 {it.linkWeb ? (
                                                     <Button asChild size="sm" variant="ghost" className="px-2">
                                                         <a href={it.linkWeb} target="_blank" rel="noopener noreferrer" title="Buka halaman produk">
@@ -318,6 +328,12 @@ export default function ItemsPage() {
                                                                 <Calculator className="h-4 w-4" /> Edit Kalkulator
                                                             </Link>
                                                         </DropdownMenuItem>
+                                                        {/* Tambahan: halaman khusus media */}
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/items/${it.id}/media`} className="flex items-center gap-2">
+                                                                <ImageIcon className="h-4 w-4" /> Edit Media
+                                                            </Link>
+                                                        </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                                 <DeleteDialog id={it.id} onDeleted={load} />
@@ -327,7 +343,6 @@ export default function ItemsPage() {
                                 ))}
                                 {items.length === 0 && !loading && (
                                     <TableRow>
-                                        {/* total kolom sekarang 9 */}
                                         <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                                             Tidak ada data
                                         </TableCell>
@@ -397,7 +412,7 @@ function DeleteDialog({ id, onDeleted }) {
     )
 }
 
-/** ======== BULK DIALOGS (kalkulator/penggunaan saja) ======== **/
+/** ======== BULK DIALOG: kalkulator/penggunaan ======== **/
 function BulkCalcDialog({ disabled, ids, count, onDone }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
@@ -421,7 +436,10 @@ function BulkCalcDialog({ disabled, ids, count, onDone }) {
             if (!res.ok) { alert(j.error || "Bulk kalkulator gagal"); return }
             setOpen(false)
             onDone?.()
-            setF({ satuan: "", nilaiSatuan: "", nilaiKonversi: "", satuanKonversi: "", nilaiPenggunaan: "", satuanPenggunaan: "", deskripsiPenggunaan: "" })
+            setF({
+                satuan: "", nilaiSatuan: "", nilaiKonversi: "", satuanKonversi: "",
+                nilaiPenggunaan: "", satuanPenggunaan: "", deskripsiPenggunaan: "",
+            })
         } finally { setBusy(false) }
     }
 
@@ -440,15 +458,29 @@ function BulkCalcDialog({ disabled, ids, count, onDone }) {
                         Menerapkan perubahan ke <b>{count}</b> item terpilih. Field kosong akan <b>diabaikan</b>.
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                        <FieldMini label="Satuan (base)"><Input value={f.satuan} onChange={(e)=>set("satuan", e.target.value)} placeholder="cth: M3" /></FieldMini>
-                        <FieldMini label="Nilai Satuan"><Input type="number" step="any" value={f.nilaiSatuan} onChange={(e)=>set("nilaiSatuan", e.target.value)} placeholder="cth: 0.75" /></FieldMini>
-                        <FieldMini label="Nilai Konversi"><Input type="number" step="any" value={f.nilaiKonversi} onChange={(e)=>set("nilaiKonversi", e.target.value)} placeholder="cth: 84" /></FieldMini>
-                        <FieldMini label="Satuan Konversi"><Input value={f.satuanKonversi} onChange={(e)=>set("satuanKonversi", e.target.value)} placeholder="cth: PCS" /></FieldMini>
+                        <FieldMini label="Satuan (base)">
+                            <Input value={f.satuan} onChange={(e)=>set("satuan", e.target.value)} placeholder="cth: M3" />
+                        </FieldMini>
+                        <FieldMini label="Nilai Satuan">
+                            <Input type="number" step="any" value={f.nilaiSatuan} onChange={(e)=>set("nilaiSatuan", e.target.value)} placeholder="cth: 0.75" />
+                        </FieldMini>
+                        <FieldMini label="Nilai Konversi">
+                            <Input type="number" step="any" value={f.nilaiKonversi} onChange={(e)=>set("nilaiKonversi", e.target.value)} placeholder="cth: 84" />
+                        </FieldMini>
+                        <FieldMini label="Satuan Konversi">
+                            <Input value={f.satuanKonversi} onChange={(e)=>set("satuanKonversi", e.target.value)} placeholder="cth: PCS" />
+                        </FieldMini>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <FieldMini label="Nilai Penggunaan"><Input type="number" step="any" value={f.nilaiPenggunaan} onChange={(e)=>set("nilaiPenggunaan", e.target.value)} placeholder="cth: 10" /></FieldMini>
-                        <FieldMini label="Satuan Penggunaan"><Input value={f.satuanPenggunaan} onChange={(e)=>set("satuanPenggunaan", e.target.value)} placeholder="cth: M2" /></FieldMini>
-                        <FieldMini label="Deskripsi Penggunaan"><Input value={f.deskripsiPenggunaan} onChange={(e)=>set("deskripsiPenggunaan", e.target.value)} placeholder="cth: Luas Dinding (m²)" /></FieldMini>
+                        <FieldMini label="Nilai Penggunaan">
+                            <Input type="number" step="any" value={f.nilaiPenggunaan} onChange={(e)=>set("nilaiPenggunaan", e.target.value)} placeholder="cth: 10" />
+                        </FieldMini>
+                        <FieldMini label="Satuan Penggunaan">
+                            <Input value={f.satuanPenggunaan} onChange={(e)=>set("satuanPenggunaan", e.target.value)} placeholder="cth: M2" />
+                        </FieldMini>
+                        <FieldMini label="Deskripsi Penggunaan">
+                            <Input value={f.deskripsiPenggunaan} onChange={(e)=>set("deskripsiPenggunaan", e.target.value)} placeholder="cth: Luas Dinding (m²)" />
+                        </FieldMini>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={()=>setOpen(false)} disabled={busy}>Batal</Button>
