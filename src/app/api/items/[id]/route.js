@@ -1,69 +1,101 @@
-export const runtime = "nodejs"
+// app/api/items/[id]/route.js
 
-import prisma from "@/lib/db"
-import { NextResponse } from "next/server"
+export const runtime = "nodejs";
 
+import prisma from "@/lib/db";
+import { NextResponse } from "next/server";
+
+// utils
 function numOrNull(v) {
-    if (v === undefined || v === null || v === "") return null
-    const n = Number(v)
-    return Number.isFinite(n) ? n : null
+    if (v === undefined || v === null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+}
+function intOrNull(v) {
+    const n = numOrNull(v);
+    return n === null ? null : Math.round(n);
+}
+function strOrNull(v) {
+    if (v === undefined || v === null) return null;
+    const s = String(v).trim();
+    return s.length ? s : null;
 }
 
 export async function GET(_req, { params }) {
     try {
-        const item = await prisma.tbMasterItem.findUnique({ where: { id: params.id } })
-        if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 })
-        return NextResponse.json(item)
+        const item = await prisma.tbMasterItem.findUnique({ where: { id: params.id } });
+        if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+        return NextResponse.json(item);
     } catch (e) {
-        console.error(e)
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        console.error(e);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 
 export async function PATCH(req, { params }) {
     try {
-        const body = await req.json()
-        const data = {}
+        const body = await req.json();
+        const data = {};
 
-        // umum
-        if (body.kodeItem !== undefined) data.kodeItem = String(body.kodeItem).trim()
-        if (body.namaItem !== undefined) data.namaItem = String(body.namaItem).trim()
-        if (body.deskripsi !== undefined) data.deskripsi = body.deskripsi ?? null
-        if (body.kategori !== undefined) data.kategori = body.kategori ?? null
-        if (body.merek !== undefined) data.merek = body.merek ?? null
-        if (body.harga !== undefined) data.harga = Number(body.harga ?? 0)
-        if (body.persentaseKomisi !== undefined) data.persentaseKomisi = numOrNull(body.persentaseKomisi)
+        // — umum —
+        if (body.kodeItem !== undefined) {
+            const v = String(body.kodeItem).trim();
+            if (!v) return NextResponse.json({ error: "kodeItem tidak boleh kosong." }, { status: 400 });
+            data.kodeItem = v;
+        }
+        if (body.namaItem !== undefined) {
+            const v = String(body.namaItem).trim();
+            if (!v) return NextResponse.json({ error: "namaItem tidak boleh kosong." }, { status: 400 });
+            data.namaItem = v;
+        }
+        if (body.deskripsi !== undefined) data.deskripsi = strOrNull(body.deskripsi);
+        if (body.kategori !== undefined) data.kategori = strOrNull(body.kategori);     // BLOCK/SLAB/BOND/SHIELD
+        if (body.jenisItem !== undefined) data.jenisItem = strOrNull(body.jenisItem); // pengganti 'merek'
+        if (body.harga !== undefined) data.harga = intOrNull(body.harga);
 
-        // kalkulator/konversi
-        if (body.satuan !== undefined) data.satuan = String(body.satuan).trim()
-        if (body.nilaiSatuan !== undefined) data.nilaiSatuan = numOrNull(body.nilaiSatuan)
-        if (body.nilaiKonversi !== undefined) data.nilaiKonversi = numOrNull(body.nilaiKonversi)
-        if (body.satuanKonversi !== undefined) data.satuanKonversi = body.satuanKonversi ?? null
+        // — kalkulator/konversi —
+        if (body.satuan !== undefined) {
+            const v = String(body.satuan).trim();
+            if (!v) return NextResponse.json({ error: "satuan tidak boleh kosong." }, { status: 400 });
+            data.satuan = v;
+        }
+        if (body.nilaiSatuan !== undefined) data.nilaiSatuan = numOrNull(body.nilaiSatuan);
+        if (body.nilaiKonversi !== undefined) data.nilaiKonversi = numOrNull(body.nilaiKonversi);
+        if (body.satuanKonversi !== undefined) data.satuanKonversi = strOrNull(body.satuanKonversi);
 
-        // penggunaan
-        if (body.nilaiPenggunaan !== undefined) data.nilaiPenggunaan = numOrNull(body.nilaiPenggunaan)
-        if (body.satuanPenggunaan !== undefined) data.satuanPenggunaan = body.satuanPenggunaan ?? null
-        if (body.deskripsiPenggunaan !== undefined) data.deskripsiPenggunaan = body.deskripsiPenggunaan ?? null
+        // — penggunaan —
+        if (body.nilaiPenggunaan !== undefined) data.nilaiPenggunaan = numOrNull(body.nilaiPenggunaan);
+        if (body.satuanPenggunaan !== undefined) data.satuanPenggunaan = strOrNull(body.satuanPenggunaan);
+        if (body.deskripsiPenggunaan !== undefined) data.deskripsiPenggunaan = strOrNull(body.deskripsiPenggunaan);
 
-        if (body.diubahOleh !== undefined) data.diubahOleh = body.diubahOleh ?? "system"
+        // — media —
+        if (body.gambarUrl !== undefined) data.gambarUrl = strOrNull(body.gambarUrl);
+        if (body.linkWeb !== undefined) data.linkWeb = strOrNull(body.linkWeb);
+
+        // — audit —
+        if (body.diubahOleh !== undefined) data.diubahOleh = strOrNull(body.diubahOleh) ?? "system";
 
         const updated = await prisma.tbMasterItem.update({
             where: { id: params.id },
             data,
-        })
-        return NextResponse.json(updated)
+        });
+        return NextResponse.json(updated);
     } catch (e) {
-        console.error(e)
-        return NextResponse.json({ error: "Gagal update item" }, { status: 500 })
+        // tangani unique violation pada kodeItem dsb.
+        const msg = e?.code === "P2002"
+            ? "Gagal update: kodeItem sudah digunakan."
+            : e?.message || "Gagal update item";
+        console.error(e);
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
 }
 
 export async function DELETE(_req, { params }) {
     try {
-        await prisma.tbMasterItem.delete({ where: { id: params.id } })
-        return NextResponse.json({ ok: true })
+        await prisma.tbMasterItem.delete({ where: { id: params.id } });
+        return NextResponse.json({ ok: true });
     } catch (e) {
-        console.error(e)
-        return NextResponse.json({ error: "Gagal hapus item" }, { status: 500 })
+        console.error(e);
+        return NextResponse.json({ error: "Gagal hapus item" }, { status: 500 });
     }
 }

@@ -15,14 +15,10 @@ const ItemsContext = createContext({
 })
 
 /**
- * Kita cache payload + ETag di localStorage supaya:
- * - pindah halaman tidak fetch ulang
- * - reload cepat kalau server balas 304
- *
- * KEYs:
- *  - pb_items_all: string JSON payload {items:[], total:...}
- *  - pb_items_etag: string ETag dari server
- *  - pb_items_updatedAt: ISO time saat cache disimpan
+ * Cache payload + ETag di localStorage
+ * - pb_items_all: string JSON payload {items:[], total:...}
+ * - pb_items_etag: string ETag dari server
+ * - pb_items_updatedAt: ISO time saat cache disimpan
  */
 const LS_PAYLOAD = "pb_items_all"
 const LS_ETAG = "pb_items_etag"
@@ -81,11 +77,27 @@ export default function ItemsProvider({ children }) {
         setState((s) => ({ ...s, loading: true, error: null }))
 
         try {
-            // pilih kolom yang cukup untuk 3 halaman
-            const fields =
-                "id,kodeItem,namaItem,deskripsi,kategori,merek,harga,satuan,nilaiSatuan," +
-                "nilaiKonversi,satuanKonversi,nilaiPenggunaan,satuanPenggunaan,deskripsiPenggunaan," +
-                "persentaseKomisi,diubahTanggal,dibuatTanggal"
+            // pilih kolom sesuai skema terbaru
+            const fields = [
+                "id",
+                "kodeItem",
+                "namaItem",
+                "deskripsi",
+                "kategori",
+                "jenisItem",          // pengganti merek
+                "harga",
+                "satuan",
+                "nilaiSatuan",
+                "nilaiKonversi",
+                "satuanKonversi",
+                "nilaiPenggunaan",
+                "satuanPenggunaan",
+                "deskripsiPenggunaan",
+                "gambarUrl",          // baru
+                "linkWeb",            // baru
+                "diubahTanggal",
+                "dibuatTanggal",
+            ].join(",")
 
             const headers = {}
             const cachedEtag = localStorage.getItem(LS_ETAG)
@@ -100,6 +112,7 @@ export default function ItemsProvider({ children }) {
             // 304: pakai cache apa adanya
             if (res.status === 304) {
                 setState((s) => ({ ...s, loading: false, ready: true }))
+                fetching.current = false
                 return
             }
 
@@ -112,7 +125,8 @@ export default function ItemsProvider({ children }) {
             // simpan cache
             localStorage.setItem(LS_PAYLOAD, JSON.stringify({ items, total: items.length }))
             if (etag) localStorage.setItem(LS_ETAG, etag)
-            localStorage.setItem(LS_UPDATED, new Date().toISOString())
+            const nowIso = new Date().toISOString()
+            localStorage.setItem(LS_UPDATED, nowIso)
 
             const { byId, categories } = buildDerived(items)
             setState({
@@ -123,7 +137,7 @@ export default function ItemsProvider({ children }) {
                 byId,
                 categories,
                 etag,
-                updatedAt: new Date().toISOString(),
+                updatedAt: nowIso,
             })
         } catch (e) {
             console.error("ItemsProvider fetch error:", e)
@@ -136,8 +150,7 @@ export default function ItemsProvider({ children }) {
     // on mount: coba cache dulu, lalu sync ke server
     useEffect(() => {
         const controller = new AbortController()
-        const had = loadFromCache()
-        // selalu sync (biar 304 kalau belum berubah)
+        loadFromCache()
         fetchAll({ signal: controller.signal })
         return () => controller.abort()
     }, [loadFromCache, fetchAll])

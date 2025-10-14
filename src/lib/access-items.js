@@ -3,6 +3,7 @@
 
 // Satu sumber kebenaran menu/akses
 export const ACCESS_ITEMS = [
+    { id: "project",             href: "/project",            label: "Project",     section: "On Progress"},
     { id: "produk",             href: "/produk",            label: "Cari Produk",     section: "Menu"},
     { id: "kalkulator",         href: "/kalkulator",        label: "Kalkulator", section: "Menu"},
     { id: "komisi",             href: "/komisi",            label: "Simulasi Komisi",   section: "Menu"},

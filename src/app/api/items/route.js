@@ -1,38 +1,50 @@
-export const runtime = "nodejs"
+// app/api/items/route.js
+export const runtime = "nodejs";
 
-import prisma from "@/lib/db"
-import { NextResponse } from "next/server"
+import prisma from "@/lib/db";
+import { NextResponse } from "next/server";
 
+// utils
 function numOrNull(v) {
-    if (v === undefined || v === null || v === "") return null
-    const n = Number(v)
-    return Number.isFinite(n) ? n : null
+    if (v === undefined || v === null || v === "") return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+}
+function intOrNull(v) {
+    const n = numOrNull(v);
+    return n === null ? null : Math.round(n);
+}
+function strOrNull(v) {
+    if (v === undefined || v === null) return null;
+    const s = String(v).trim();
+    return s.length ? s : null;
 }
 
 export async function GET(req) {
     try {
-        const url = new URL(req.url)
-        const q = (url.searchParams.get("q") || "").trim()
-        const cat = (url.searchParams.get("cat") || "").trim()
-        const page = Math.max(1, Number(url.searchParams.get("page") || 1))
-        const pageSize = Math.min(50, Math.max(1, Number(url.searchParams.get("pageSize") || 10)))
-        const skip = (page - 1) * pageSize
+        const url = new URL(req.url);
+        const q = (url.searchParams.get("q") || "").trim();
+        const cat = (url.searchParams.get("cat") || "").trim();
+        const page = Math.max(1, Number(url.searchParams.get("page") || 1));
+        const pageSize = Math.min(50, Math.max(1, Number(url.searchParams.get("pageSize") || 10)));
+        const skip = (page - 1) * pageSize;
 
         const where = {
             ...(q
                 ? {
                     OR: [
-                        { kodeItem: { contains: q } },
-                        { namaItem: { contains: q } },
-                        { kategori: { contains: q } },
-                        { merek: { contains: q } },
+                        { kodeItem:   { contains: q, mode: "insensitive" } },
+                        { namaItem:   { contains: q, mode: "insensitive" } },
+                        { kategori:   { contains: q, mode: "insensitive" } },
+                        { jenisItem:  { contains: q, mode: "insensitive" } },
+                        { deskripsi:  { contains: q, mode: "insensitive" } },
                     ],
                 }
                 : {}),
-            ...(cat ? { kategori: { equals: cat } } : {}),
-        }
+            ...(cat ? { kategori: { equals: cat, mode: "insensitive" } } : {}),
+        };
 
-        const [rows, total] = await Promise.all([
+        const [items, total] = await Promise.all([
             prisma.tbMasterItem.findMany({
                 where,
                 orderBy: { dibuatTanggal: "desc" },
@@ -40,58 +52,68 @@ export async function GET(req) {
                 take: pageSize,
             }),
             prisma.tbMasterItem.count({ where }),
-        ])
+        ]);
 
         return NextResponse.json({
-            items: rows,
+            items,
             total,
             page,
             pageSize,
             totalPages: Math.max(1, Math.ceil(total / pageSize)),
-        })
+        });
     } catch (e) {
-        console.error(e)
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        console.error(e);
+        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
 
 export async function POST(req) {
     try {
-        const body = await req.json()
+        const body = await req.json();
+
         const data = {
             // umum
             kodeItem: String(body.kodeItem || "").trim(),
             namaItem: String(body.namaItem || "").trim(),
-            deskripsi: body.deskripsi ?? null,
-            kategori: body.kategori ?? null,
-            merek: body.merek ?? null,
-            harga: Number(body.harga ?? 0),
+            deskripsi: strOrNull(body.deskripsi),
+            kategori: strOrNull(body.kategori),      // BLOCK/SLAB/BOND/SHIELD (opsional)
+            jenisItem: strOrNull(body.jenisItem),    // pengganti 'merek'
+            harga: intOrNull(body.harga),
 
             // konversi/kalkulator
-            satuan: String(body.satuan || "").trim(),
+            satuan: String(body.satuan || "").trim(), // WAJIB
             nilaiSatuan: numOrNull(body.nilaiSatuan),
             nilaiKonversi: numOrNull(body.nilaiKonversi),
-            satuanKonversi: body.satuanKonversi ?? null,
+            satuanKonversi: strOrNull(body.satuanKonversi),
 
             // penggunaan
             nilaiPenggunaan: numOrNull(body.nilaiPenggunaan),
-            satuanPenggunaan: body.satuanPenggunaan ?? null,
-            deskripsiPenggunaan: body.deskripsiPenggunaan ?? null,
+            satuanPenggunaan: strOrNull(body.satuanPenggunaan),
+            deskripsiPenggunaan: strOrNull(body.deskripsiPenggunaan),
 
-            // komisi
-            persentaseKomisi: numOrNull(body.persentaseKomisi),
+            // media
+            gambarUrl: strOrNull(body.gambarUrl),
+            linkWeb: strOrNull(body.linkWeb),
 
-            dibuatOleh: body.dibuatOleh ?? "system",
-        }
+            dibuatOleh: strOrNull(body.dibuatOleh) ?? "system",
+        };
 
+        // validasi minimal
         if (!data.kodeItem || !data.namaItem || !data.satuan) {
-            return NextResponse.json({ error: "kodeItem, namaItem, satuan wajib." }, { status: 400 })
+            return NextResponse.json(
+                { error: "Field kodeItem, namaItem, dan satuan wajib diisi." },
+                { status: 400 }
+            );
         }
 
-        const created = await prisma.tbMasterItem.create({ data })
-        return NextResponse.json(created, { status: 201 })
+        const created = await prisma.tbMasterItem.create({ data });
+        return NextResponse.json(created, { status: 201 });
     } catch (e) {
-        console.error("POST /api/items failed:", e)
-        return NextResponse.json({ error: e?.message || "Gagal membuat item" }, { status: 500 })
+        const msg =
+            e?.code === "P2002"
+                ? "Kode item sudah dipakai."
+                : e?.message || "Gagal membuat item";
+        console.error("POST /api/items failed:", e);
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
 }

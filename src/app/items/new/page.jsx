@@ -1,3 +1,5 @@
+// app/items/new/page.js
+
 "use client"
 
 import { useState } from "react"
@@ -18,8 +20,8 @@ export default function NewItemPage() {
         kodeItem: "",
         namaItem: "",
         deskripsi: "",
-        kategori: "",
-        merek: "",
+        kategori: "",    // BLOCK / SLAB / BOND / SHIELD (opsional)
+        jenisItem: "",   // pengganti 'merek'
         harga: "",
         // Kalkulator/Konversi
         satuan: "",
@@ -30,8 +32,9 @@ export default function NewItemPage() {
         nilaiPenggunaan: "",
         satuanPenggunaan: "",
         deskripsiPenggunaan: "",
-        // Komisi
-        persentaseKomisi: "",
+        // Media
+        gambarUrl: "",
+        linkWeb: "",
     })
     const set = (k, v) => setF((s) => ({ ...s, [k]: v }))
 
@@ -86,10 +89,10 @@ export default function NewItemPage() {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field label="Kategori">
-                                    <Input value={f.kategori} onChange={(e)=>set("kategori", e.target.value)} placeholder="cth: BLOCK STANDARD" />
+                                    <Input value={f.kategori} onChange={(e)=>set("kategori", e.target.value)} placeholder="cth: BLOCK / SLAB / BOND / SHIELD" />
                                 </Field>
-                                <Field label="Merek">
-                                    <Input value={f.merek} onChange={(e)=>set("merek", e.target.value)} placeholder="cth: POWER BLOCK" />
+                                <Field label="Jenis Item">
+                                    <Input value={f.jenisItem} onChange={(e)=>set("jenisItem", e.target.value)} placeholder="cth: POWER BLOCK" />
                                 </Field>
                             </div>
 
@@ -152,23 +155,19 @@ export default function NewItemPage() {
 
                         <Separator />
 
-                        {/* Komisi */}
+                        {/* Media */}
                         <section className="space-y-4">
                             <div>
-                                <div className="text-sm font-medium">Komisi</div>
-                                <p className="text-xs text-muted-foreground">Isi dalam desimal. Contoh: 0.004 = 0.4%.</p>
+                                <div className="text-sm font-medium">Media</div>
+                                <p className="text-xs text-muted-foreground">Tambahkan URL gambar & tautan informasi produk.</p>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <Field label="Persentase Komisi (desimal)">
-                                    <Input
-                                        type="number"
-                                        step="any"
-                                        inputMode="decimal"
-                                        value={f.persentaseKomisi}
-                                        onChange={(e)=>set("persentaseKomisi", e.target.value)}
-                                        placeholder="cth: 0.004"
-                                    />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field label="Gambar URL">
+                                    <Input value={f.gambarUrl} onChange={(e)=>set("gambarUrl", e.target.value)} placeholder="https://..." />
+                                </Field>
+                                <Field label="Link Web">
+                                    <Input value={f.linkWeb} onChange={(e)=>set("linkWeb", e.target.value)} placeholder="https://..." />
                                 </Field>
                             </div>
                         </section>

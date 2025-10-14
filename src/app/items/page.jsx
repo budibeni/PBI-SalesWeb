@@ -22,7 +22,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-    Plus, Search as SearchIcon, Trash2, MoreHorizontal, Pencil, Calculator, Percent,
+    Plus, Search as SearchIcon, Trash2, MoreHorizontal, Pencil, Calculator,
+    Image as ImageIcon, Link as LinkIcon,
 } from "lucide-react"
 
 const CAT_ALL = "__ALL__"
@@ -35,7 +36,7 @@ export default function ItemsPage() {
     const urlQ = sp.get("q") || ""
     const urlPage = Math.max(1, Number(sp.get("page") || 1))
     const urlCat = sp.get("cat") || ""
-    const urlSize = sp.get("size") || PAGE_SIZES[0] // default "10"
+    const urlSize = sp.get("size") || PAGE_SIZES[0]
 
     const [q, setQ] = useState(urlQ)
     const [cat, setCat] = useState(urlCat || CAT_ALL)
@@ -45,13 +46,11 @@ export default function ItemsPage() {
     const [data, setData] = useState({ items: [], total: 0, page: urlPage, totalPages: 1 })
     const [loading, setLoading] = useState(false)
 
-    // Derivatives (aman)
     const items = Array.isArray(data?.items) ? data.items : []
     const total = Number(data?.total ?? 0)
     const page = Number(data?.page ?? 1)
     const totalPages = Number(data?.totalPages ?? 1)
 
-    // selection (bulk)
     const [selected, setSelected] = useState(() => new Set())
     const allIds = useMemo(() => items.map((it) => it.id), [items])
     const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id))
@@ -73,14 +72,12 @@ export default function ItemsPage() {
         })
     }
 
-    // sync state dari URL
     useEffect(() => {
         setQ(urlQ)
         setCat(urlCat || CAT_ALL)
         setSize(urlSize || PAGE_SIZES[0])
     }, [urlQ, urlCat, urlSize])
 
-    // categories sekali
     useEffect(() => {
         let ignore = false
         ;(async () => {
@@ -155,12 +152,6 @@ export default function ItemsPage() {
                             ids={[...selected]}
                             onDone={async () => { await load() }}
                         />
-                        <BulkCommissionDialog
-                            disabled={selected.size === 0}
-                            count={selected.size}
-                            ids={[...selected]}
-                            onDone={async () => { await load() }}
-                        />
                         <Button asChild>
                             <Link href="/items/new"><Plus className="mr-2 h-4 w-4" />Tambah</Link>
                         </Button>
@@ -172,7 +163,7 @@ export default function ItemsPage() {
                     <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                         <div className="relative w-full sm:w-80">
                             <Input
-                                placeholder="Cari kode / nama / kategori / merek"
+                                placeholder="Cari kode / nama / kategori / jenis"
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
                                 className="pr-10"
@@ -237,10 +228,11 @@ export default function ItemsPage() {
                                     </TableHead>
                                     <TableHead className="w-32">Kode</TableHead>
                                     <TableHead>Nama</TableHead>
+                                    <TableHead className="w-40">Kategori / Jenis</TableHead>
                                     <TableHead className="w-24">Satuan</TableHead>
                                     <TableHead className="w-52">Konversi</TableHead>
                                     <TableHead className="w-56">Penggunaan</TableHead>
-                                    <TableHead className="w-28">Komisi</TableHead>
+                                    <TableHead className="w-40">Media</TableHead>{/* <- baru */}
                                     <TableHead className="w-24 text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -257,6 +249,12 @@ export default function ItemsPage() {
                                         <TableCell className="font-medium">{it.kodeItem}</TableCell>
                                         <TableCell>{it.namaItem}</TableCell>
                                         <TableCell>
+                                            <div className="text-xs leading-tight">
+                                                <div><span className="text-muted-foreground">Kategori:</span> {it.kategori || "—"}</div>
+                                                <div><span className="text-muted-foreground">Jenis:</span> {it.jenisItem || "—"}</div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
                                             {it.nilaiSatuan ? `${it.nilaiSatuan} ${it.satuan}` : it.satuan}
                                         </TableCell>
                                         <TableCell>
@@ -267,9 +265,40 @@ export default function ItemsPage() {
                                             {it.nilaiPenggunaan
                                                 ? `1 item (${it.nilaiSatuan ?? 1} ${it.satuan}) → ${it.nilaiPenggunaan} ${it.satuanPenggunaan || "?"}` : "—"}
                                         </TableCell>
+
+                                        {/* === Media column === */}
                                         <TableCell>
-                                            {it.persentaseKomisi != null ? `${(it.persentaseKomisi * 100).toFixed(2)}%` : "—"}
+                                            <div className="flex items-center gap-3">
+                                                {/* Thumbnail */}
+                                                {it.gambarUrl ? (
+                                                    <img
+                                                        src={it.gambarUrl}
+                                                        alt={it.namaItem}
+                                                        className="h-9 w-9 rounded-md object-cover border"
+                                                        referrerPolicy="no-referrer"
+                                                    />
+                                                ) : (
+                                                    <div className="h-9 w-9 rounded-md border flex items-center justify-center text-muted-foreground">
+                                                        <ImageIcon className="h-4 w-4" />
+                                                    </div>
+                                                )}
+
+                                                {/* Link web */}
+                                                {it.linkWeb ? (
+                                                    <Button asChild size="sm" variant="ghost" className="px-2">
+                                                        <a href={it.linkWeb} target="_blank" rel="noopener noreferrer" title="Buka halaman produk">
+                              <span className="inline-flex items-center gap-1">
+                                <LinkIcon className="h-4 w-4" />
+                                <span className="text-xs">Buka link</span>
+                              </span>
+                                                        </a>
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground">—</span>
+                                                )}
+                                            </div>
                                         </TableCell>
+
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <DropdownMenu>
@@ -278,7 +307,7 @@ export default function ItemsPage() {
                                                             <MoreHorizontal className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuContent align="end" className="w-56">
                                                         <DropdownMenuItem asChild>
                                                             <Link href={`/items/${it.id}/edit`} className="flex items-center gap-2">
                                                                 <Pencil className="h-4 w-4" /> Edit Umum
@@ -287,11 +316,6 @@ export default function ItemsPage() {
                                                         <DropdownMenuItem asChild>
                                                             <Link href={`/items/${it.id}/calc`} className="flex items-center gap-2">
                                                                 <Calculator className="h-4 w-4" /> Edit Kalkulator
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem asChild>
-                                                            <Link href={`/items/${it.id}/commission`} className="flex items-center gap-2">
-                                                                <Percent className="h-4 w-4" /> Edit Komisi
                                                             </Link>
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -303,7 +327,8 @@ export default function ItemsPage() {
                                 ))}
                                 {items.length === 0 && !loading && (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                                        {/* total kolom sekarang 9 */}
+                                        <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                                             Tidak ada data
                                         </TableCell>
                                     </TableRow>
@@ -372,7 +397,7 @@ function DeleteDialog({ id, onDeleted }) {
     )
 }
 
-/** ======== BULK DIALOGS (tetap) ======== **/
+/** ======== BULK DIALOGS (kalkulator/penggunaan saja) ======== **/
 function BulkCalcDialog({ disabled, ids, count, onDone }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
@@ -424,58 +449,6 @@ function BulkCalcDialog({ disabled, ids, count, onDone }) {
                         <FieldMini label="Nilai Penggunaan"><Input type="number" step="any" value={f.nilaiPenggunaan} onChange={(e)=>set("nilaiPenggunaan", e.target.value)} placeholder="cth: 10" /></FieldMini>
                         <FieldMini label="Satuan Penggunaan"><Input value={f.satuanPenggunaan} onChange={(e)=>set("satuanPenggunaan", e.target.value)} placeholder="cth: M2" /></FieldMini>
                         <FieldMini label="Deskripsi Penggunaan"><Input value={f.deskripsiPenggunaan} onChange={(e)=>set("deskripsiPenggunaan", e.target.value)} placeholder="cth: Luas Dinding (m²)" /></FieldMini>
-                    </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={()=>setOpen(false)} disabled={busy}>Batal</Button>
-                        <Button type="submit" disabled={busy}>Terapkan</Button>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
-function BulkCommissionDialog({ disabled, ids, count, onDone }) {
-    const [open, setOpen] = useState(false)
-    const [busy, setBusy] = useState(false)
-    const [value, setValue] = useState("")
-
-    async function submit(e) {
-        e?.preventDefault?.()
-        setBusy(true)
-        try {
-            const payload = { ids, persentaseKomisi: value }
-            const res = await fetch("/api/items/bulk", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            })
-            const j = await res.json().catch(() => ({}))
-            if (!res.ok) { alert(j.error || "Bulk komisi gagal"); return }
-            setOpen(false)
-            onDone?.()
-            setValue("")
-        } finally { setBusy(false) }
-    }
-
-    return (
-        <Dialog open={open} onOpenChange={(v) => !disabled && setOpen(v)}>
-            <DialogTrigger asChild>
-                <Button variant="outline" disabled={disabled} title="Edit komisi untuk banyak item">
-                    <Percent className="h-4 w-4 mr-2" />
-                    Edit Komisi{count ? ` • ${count}` : ""}
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader><DialogTitle>Bulk Edit Komisi</DialogTitle></DialogHeader>
-                <form onSubmit={submit} className="space-y-4">
-                    <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
-                        Menerapkan perubahan ke <b>{count}</b> item terpilih. Kosong = diabaikan.
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <FieldMini label="Persentase Komisi (desimal)">
-                            <Input type="number" step="any" value={value} onChange={(e)=>setValue(e.target.value)} placeholder="cth: 0.004" />
-                        </FieldMini>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={()=>setOpen(false)} disabled={busy}>Batal</Button>

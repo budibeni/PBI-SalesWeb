@@ -35,8 +35,6 @@ model TbArtikel {
   dibuatTanggal DateTime @default(now()) @map("dibuat_tanggal")
   diubahOleh    String?  @map("diubah_oleh")
   diubahTanggal DateTime @updatedAt @map("diubah_tanggal")
-
-  @@map("tb_artikel")
 }
 
 model TbMasterItem {
@@ -44,8 +42,8 @@ model TbMasterItem {
   kodeItem            String   @unique
   namaItem            String
   deskripsi           String?
-  kategori            String?
-  merek               String?
+  kategori            String? //BLOCK, SLAB, BOND , SHIELD
+  jenisItem           String?
   harga               Int?
   satuan              String // m3
   nilaiSatuan         Float? // contoh: 0.75
@@ -54,9 +52,39 @@ model TbMasterItem {
   nilaiPenggunaan     Float? // 10 = 0.75 (m3)
   satuanPenggunaan    String? //m2
   deskripsiPenggunaan String? //Luas Dinding (m²)
-  persentaseKomisi    Float?
+  gambarUrl           String?
+  linkWeb             String?
   dibuatOleh          String?
   dibuatTanggal       DateTime @default(now())
   diubahOleh          String?
   diubahTanggal       DateTime @updatedAt
+}
+
+model TbMasterKomisi {
+  id            String   @id @default(cuid())
+  kategori      String   @unique //BLOCK, SLAB, BOND , SHIELD
+  persentase    Float?
+  dibuatOleh    String?
+  dibuatTanggal DateTime @default(now())
+  diubahOleh    String?
+  diubahTanggal DateTime @updatedAt
+}
+
+model TbSkenarioKomisi {
+  id            String   @id @default(cuid())
+  nama          String
+  targetTotal   Int?
+  targetBlock   Int?
+  targetSlab    Int?
+  targetBond    Int?
+  targetShield  Int?
+  komisiDasar   Int?
+  bonus1        Int?
+  bonus2        Int?
+  subtotal      Int?
+  items         Json?
+  dibuatOleh    String?
+  dibuatTanggal DateTime @default(now())
+  diubahOleh    String?
+  diubahTanggal DateTime @updatedAt
 }
