@@ -62,7 +62,7 @@ model TbMasterItem {
 
 model TbMasterKomisi {
   id            String   @id @default(cuid())
-  kategori      String   @unique //BLOCK, SLAB, BOND , SHIELD
+  kategori      String   @unique
   persentase    Float?
   dibuatOleh    String?
   dibuatTanggal DateTime @default(now())

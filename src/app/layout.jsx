@@ -4,14 +4,15 @@ import ThemeProvider from "@/components/ui/theme-provider"
 import AppSidebarLayout from "@/components/AppSidebar"
 import { getCurrentUser } from "@/lib/auth-server"
 import prisma from "@/lib/db"
-import ItemsProvider from "@/components/items/ItemsProvider";
+import ItemsProvider from "@/providers/ItemsProvider";
+import KategoriProvider from "@/providers/KategoriProvider";
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 export const fetchCache = "default-no-store"
 
 export const metadata = {
-    title: "Sales PBI",
+    title: "PBI SalesGo",
     description: "Bensoft Power Block",
 }
 
@@ -36,9 +37,11 @@ export default async function RootLayout({ children }) {
         <ThemeProvider>
             {user ? (
                 <AppSidebarLayout user={user}>
-                    <ItemsProvider>
-                    {children}
-                    </ItemsProvider>
+                    <KategoriProvider>
+                        <ItemsProvider>
+                            {children}
+                        </ItemsProvider>
+                    </KategoriProvider>
                 </AppSidebarLayout>
             ) : (
                 children

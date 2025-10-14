@@ -24,7 +24,7 @@ export default function ProdukPage() {
     const { ready, loading, items, categories, refresh } = useItems()
     const [q, setQ] = useState("")
     const [cat, setCat] = useState("__ALL__")
-    const [mode, setMode] = useState("card") // "card" | "table"
+    const [mode, setMode] = useState("table") // "card" | "table"
 
     const filtered = useMemo(() => {
         const qq = q.trim().toLowerCase()
