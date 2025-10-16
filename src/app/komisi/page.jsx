@@ -11,6 +11,8 @@ import TargetKomisi from "./TargetKomisi"
 import SearchItem from "./SearchItem"
 import TableProduk from "./TableProduk"
 
+const CAT_ALL = "__ALL__"
+
 export default function SimulasiPage() {
     const { ready, loading, items, refresh } = useItems()
 
@@ -19,6 +21,9 @@ export default function SimulasiPage() {
     const [targetPerKategoriRaw, setTargetPerKategoriRaw] = React.useState({})
     const [targetComputed, setTargetComputed] = React.useState(null)
 
+    // ===== FILER KATEGORI (kontrol di halaman agar Search & Table sinkron) =====
+    const [selectedCat, setSelectedCat] = React.useState(CAT_ALL) // "__ALL__" | nama kategori
+
     // ===== BARIS PRODUK (SESUAI TABEL BARU) =====
     // Struktur row: { id, msrp, harga, qty, persen }
     const [rows, setRows] = React.useState([])
@@ -26,9 +31,7 @@ export default function SimulasiPage() {
     // handler saat pilih item dari SearchItem: tambahkan baris jika belum ada
     const onPick = (rowBaru) => {
         if (!rowBaru) return
-        setRows((prev) =>
-            prev.some((r) => r.id === rowBaru.id) ? prev : [...prev, rowBaru]
-        )
+        setRows((prev) => (prev.some((r) => r.id === rowBaru.id) ? prev : [...prev, rowBaru]))
     }
 
     const onRemoveRow = (id) => {
@@ -74,7 +77,7 @@ export default function SimulasiPage() {
     }, [rows, items])
 
     return (
-        <div className="p-4">
+        <div>
             <Card className="mx-auto max-w-6xl">
                 <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2">
                     <CardTitle className="text-base sm:text-lg">Target Komisi</CardTitle>
@@ -119,19 +122,24 @@ export default function SimulasiPage() {
                         onComputed={setTargetComputed}
                     />
                 </div>
-
-
             </Card>
+
             <Card className="mx-auto max-w-6xl mt-4">
                 <CardContent className="space-y-6">
+                    {/* ===== Search + Filter kategori (kontrol kategori dari page) ===== */}
                     <SearchItem
                         onPick={onPick}
+                        selectedCat={selectedCat}
+                        onChangeCategory={setSelectedCat}
                     />
+
+                    {/* ===== Tabel (dibatasi tampilan berdasar kategori TERPILIH; data rows tidak dihapus) ===== */}
                     <TableProduk
                         rows={rows}
                         items={items}
                         onChangeRow={onChangeRow}
                         onRemoveRow={onRemoveRow}
+                        filterKategori={selectedCat}   // <-- penting: hide baris non-kategori
                     />
 
                     <div className="text-xs text-muted-foreground">

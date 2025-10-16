@@ -219,7 +219,6 @@ export default function TargetKomisi({
                                         id={`kat-${kat}`}
                                         value={raw}
                                         onChange={(e) => setKatValue(kat, e.target.value)}
-                                        // placeholder={calc.forcedMode === "%" ? "mis: 10 atau 10%" : "mis: 750000"}
                                         autoComplete="off"
                                         inputMode="decimal"
                                         aria-label={`Target kategori ${kat}`}
