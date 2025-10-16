@@ -5,8 +5,7 @@ import React from "react"
 import useItems from "@/hooks/useItems"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import CopyButton from "@/components/ui/copy-button"
-
+import { RefreshCcw, Trash2 } from "lucide-react"
 import { fmt, toNum } from "./utils"
 import TargetKomisi from "./TargetKomisi"
 import SearchItem from "./SearchItem"
@@ -77,33 +76,40 @@ export default function SimulasiPage() {
     return (
         <div className="p-4">
             <Card className="mx-auto max-w-6xl">
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Simulasi Komisi</CardTitle>
-                    <div className="flex items-center gap-2">
-                        <div className="text-xs text-muted-foreground">
-                            {loading ? "Memuat…" : ready ? `Baris ${rows.length}` : "Siapkan data…"}
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2">
+                    <CardTitle className="text-base sm:text-lg">Target Komisi</CardTitle>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+                        <div className="flex-1 text-xs text-muted-foreground sm:whitespace-nowrap">
+                            {loading ? "Memuat…" : ready ? `Item : ${rows.length}` : "Siapkan data…"}
                         </div>
-                        <CopyButton
-                            getText={buildCopyAll}
-                            size="sm"
-                            label="Salin Semua"
-                            successLabel="Tersalin!"
-                            title="Salin ringkasan komisi semua baris"
-                            disabled={rows.length === 0}
-                        />
-                        <Button variant="outline" onClick={() => refresh()}>
-                            Refresh data
+
+                        {/* Tombol Refresh */}
+                        <Button
+                            variant="outline"
+                            onClick={() => refresh()}
+                            className="sm:w-auto flex items-center justify-center gap-1"
+                            title="Refresh data"
+                        >
+                            <RefreshCcw className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Refresh</span>
                         </Button>
-                        <Button variant="ghost" onClick={() => setRows([])} disabled={rows.length === 0}>
-                            Bersihkan pilihan
+
+                        {/* Tombol Bersihkan */}
+                        <Button
+                            variant="outline"
+                            onClick={() => setRows([])}
+                            disabled={rows.length === 0}
+                            className="sm:w-auto flex items-center justify-center gap-1"
+                            title="Bersihkan"
+                        >
+                            <Trash2 className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Bersihkan</span>
                         </Button>
                     </div>
                 </CardHeader>
 
-                <CardContent className="space-y-6">
-                    {/* ===== Search Item (tambah baris dengan msrp/harga/qty/persen) ===== */}
-                    <SearchItem onPick={onPick} />
-
+                <div className="px-2">
                     {/* ===== Target (global & per-kategori) — perhitungan diserahkan ke komponen ===== */}
                     <TargetKomisi
                         valueGlobal={targetGlobalRaw}
@@ -112,8 +118,15 @@ export default function SimulasiPage() {
                         onChangePerKategori={setTargetPerKategoriRaw}
                         onComputed={setTargetComputed}
                     />
+                </div>
 
-                    {/* ===== Tabel Produk (Produk, MSRP, Harga, Qty, Persen, Subtotal) ===== */}
+
+            </Card>
+            <Card className="mx-auto max-w-6xl mt-4">
+                <CardContent className="space-y-6">
+                    <SearchItem
+                        onPick={onPick}
+                    />
                     <TableProduk
                         rows={rows}
                         items={items}

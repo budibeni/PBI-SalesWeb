@@ -5,21 +5,117 @@ import React from "react"
 import { useKategori } from "@/providers/KategoriProvider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import { fmt, toNum } from "./utils"
 
 /**
  * TargetKomisi
- * - Aturan:
- *   • Jika Global kosong → input kategori HARUS nominal. Global = Σ kategori.
- *   • Jika Global terisi → input kategori HARUS persen (mis. 10%). Total ≤ 100%.
- *   • Tampilkan sisa nominal & persen saat belum 100% (ketika global terisi).
+ * Aturan:
+ *  • Global kosong  -> mode "Rp." (nominal). Global = Σ kategori. Tampilkan % kontribusi masing-masing kategori terhadap total kategori.
+ *  • Global terisi  -> mode "%". Σ persen ≤ 100%. Tampilkan Rp hasil distribusi per kategori & sisa %/Rp.
  *
  * Props:
- *  - valueGlobal, onChangeGlobal(string)
- *  - valuePerKategori (obj: { [kategori]: string }), onChangePerKategori(fn)
- *  - onComputed?(result) => { mode, global, perKategoriNominal, totalPercent, remainingPct, remainingNominal, error }
+ *  - valueGlobal: string
+ *  - onChangeGlobal: (string) => void
+ *  - valuePerKategori: Record<string, string>
+ *  - onChangePerKategori: (updater: (prev: Record<string,string>) => Record<string,string>) => void
+ *  - onComputed?: (result) => void
  */
+
+// ===== util kecil & terstruktur =====
+const isFilled = (v) => String(v ?? "").trim().length > 0
+const coerceNum = (v) => Math.max(0, toNum(String(v ?? "")))
+const stripPercent = (s) => String(s ?? "").trim().replace(/%/g, "")
+
+/** aman untuk setState objek: menerima value atau updater */
+const updateMap =
+    (setter) =>
+        (key, rawValue) => {
+            setter((prev) => {
+                const current = typeof prev === "function" ? prev() : prev || {}
+                return { ...current, [key]: rawValue }
+            })
+        }
+
+/** inti perhitungan: dipisahkan agar mudah dibaca/dirawat */
+function computeTargets({ expand, valueGlobal, valuePerKategori }) {
+    const g = coerceNum(valueGlobal)
+    const hasGlobal = isFilled(valueGlobal) && g > 0
+    const forcedMode = hasGlobal ? "%" : "Rp."
+
+    let error = null
+    const perKategoriNominal = {}
+    let totalNominal = 0
+    let totalPercent = 0
+
+    // jika tidak expand → hanya global yg relevan
+    if (!expand) {
+        return {
+            forcedMode,
+            mode: "GLOBAL_ONLY",
+            global: g,
+            perKategoriNominal,
+            totalNominal,
+            totalPercent,
+            remainingPct: hasGlobal ? 1 : 0,
+            remainingNominal: hasGlobal ? g : 0,
+            error: null,
+        }
+    }
+
+    if (forcedMode === "Rp.") {
+        // Mode nominal (global kosong): Global = Σ kategori
+        for (const [kat, raw] of Object.entries(valuePerKategori || {})) {
+            const n = coerceNum(raw)
+            if (!n) continue
+            perKategoriNominal[kat] = n
+            totalNominal += n
+        }
+
+        return {
+            forcedMode,
+            mode: "NOMINAL_ONLY",
+            global: totalNominal,
+            perKategoriNominal,
+            totalNominal,
+            totalPercent: 0,
+            remainingPct: 0,
+            remainingNominal: 0,
+            error,
+        }
+    }
+
+    // Mode persen (global terisi): Σ persen ≤ 100%
+    for (const [kat, raw] of Object.entries(valuePerKategori || {})) {
+        const cleaned = stripPercent(raw)
+        if (!isFilled(cleaned)) continue
+        const pct = Math.max(0, toNum(cleaned)) / 100
+        totalPercent += pct
+        perKategoriNominal[kat] = g * pct
+    }
+
+    if (totalPercent - 1 > 1e-6) {
+        const overPct = (totalPercent - 1) * 100
+        error = `Total persentase kategori melebihi 100% (+${fmt(overPct, 2)}%).`
+    }
+
+    totalNominal = Object.values(perKategoriNominal).reduce((a, b) => a + b, 0)
+    const remainingPct = Math.max(0, 1 - totalPercent)
+    const remainingNominal = Math.max(0, g - totalNominal)
+
+    return {
+        forcedMode,
+        mode: "PERCENT_ONLY",
+        global: g,
+        perKategoriNominal,
+        totalNominal,
+        totalPercent,
+        remainingPct,
+        remainingNominal,
+        error,
+    }
+}
+
 export default function TargetKomisi({
                                          valueGlobal,
                                          onChangeGlobal,
@@ -31,165 +127,104 @@ export default function TargetKomisi({
     const [expand, setExpand] = React.useState(false)
 
     const kategoriList = React.useMemo(
-        () => (Array.isArray(kategoriItems) ? kategoriItems.map((r) => r.kategori) : []),
-        [kategoriItems]
+        () =>
+            Array.isArray(kategoriItems)
+                ? kategoriItems.map((r) => r.kategori).filter(Boolean)
+                : [],
+        [kategoriItems],
     )
 
-    const hasGlobal = React.useMemo(
-        () => toNum(valueGlobal) > 0 && String(valueGlobal || "").trim().length > 0,
-        [valueGlobal]
+    // hitung hasil (memoized)
+    const calc = React.useMemo(
+        () => computeTargets({ expand, valueGlobal, valuePerKategori }),
+        [expand, valueGlobal, valuePerKategori],
     )
 
-    const calc = React.useMemo(() => {
-        const g = toNum(valueGlobal)
-        let error = null
-        let perKategoriNominal = {}
-        let totalNominal = 0
-        let totalPercent = 0
-
-        if (!expand) {
-            return {
-                mode: "GLOBAL_ONLY",
-                global: g,
-                perKategoriNominal,
-                totalNominal,
-                totalPercent,
-                remainingPct: hasGlobal ? 1 : 0,
-                remainingNominal: hasGlobal ? g : 0,
-                error: null,
-            }
-        }
-
-        if (!hasGlobal) {
-            // kategori HARUS nominal
-            for (const [kat, raw] of Object.entries(valuePerKategori || {})) {
-                const s = String(raw || "").trim()
-                if (!s) continue
-                if (s.endsWith("%")) {
-                    error = "Saat Target Global kosong, input kategori harus nominal (tanpa %)."
-                    break
-                }
-                const n = Math.max(0, toNum(s))
-                perKategoriNominal[kat] = n
-                totalNominal += n
-            }
-            return {
-                mode: "NOMINAL_ONLY",
-                global: totalNominal,
-                perKategoriNominal,
-                totalNominal,
-                totalPercent: 0,
-                remainingPct: 0,
-                remainingNominal: 0,
-                error,
-            }
-        } else {
-            // kategori HARUS persen
-            for (const [kat, raw] of Object.entries(valuePerKategori || {})) {
-                const s = String(raw || "").trim()
-                if (!s) continue
-                if (!s.endsWith("%")) {
-                    error = "Saat Target Global diisi, input kategori harus persen (mis. 10%)."
-                    break
-                }
-                const pct = Math.max(0, toNum(s.slice(0, -1))) / 100
-                totalPercent += pct
-                perKategoriNominal[kat] = g * pct
-            }
-
-            if (!error && totalPercent - 1 > 1e-6) {
-                const overPct = (totalPercent - 1) * 100
-                error = `Total persentase kategori melebihi 100% (+${fmt(overPct, 2)}%).`
-            }
-
-            totalNominal = Object.values(perKategoriNominal).reduce((a, b) => a + b, 0)
-            const remainingPct = Math.max(0, 1 - totalPercent)
-            const remainingNominal = Math.max(0, g - totalNominal)
-
-            return {
-                mode: "PERCENT_ONLY",
-                global: g,
-                perKategoriNominal,
-                totalNominal,
-                totalPercent,
-                remainingPct,
-                remainingNominal,
-                error,
-            }
-        }
-    }, [expand, hasGlobal, valueGlobal, valuePerKategori])
-
+    // emit ke parent bila diminta
     React.useEffect(() => {
         onComputed?.(calc)
     }, [calc, onComputed])
 
+    // helper untuk set target per kategori
+    const setKatValue = React.useMemo(() => updateMap(onChangePerKategori), [onChangePerKategori])
+
     const toggleExpand = () => {
         setExpand((prev) => {
             const next = !prev
-            if (!next) {
-                // collapse → kosongkan target per-kategori
-                onChangePerKategori?.({})
-            }
+            if (!next) onChangePerKategori?.(() => ({})) // collapse ⇒ kosongkan per-kategori
             return next
         })
     }
 
-    return (
-        <div className="rounded-md border p-4 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-                <div className="font-medium">Target</div>
-                <Button type="button" size="sm" variant="outline" onClick={toggleExpand}>
-                    {expand ? (
-                        <>
-                            <ChevronDown className="mr-2 h-4 w-4" /> Sembunyikan (collapse)
-                        </>
-                    ) : (
-                        <>
-                            <ChevronRight className="mr-2 h-4 w-4" /> Atur per Kategori (expand)
-                        </>
-                    )}
-                </Button>
-            </div>
+    const hasGlobal = calc.forcedMode === "%"
+    const totalKategori = Object.values(calc.perKategoriNominal || {}).reduce((a, b) => a + b, 0)
 
-            {/* Target Global */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
-                <label className="text-sm text-muted-foreground sm:col-span-1">Target Global</label>
-                <div className="sm:col-span-2">
-                    <Input
-                        value={valueGlobal}
-                        onChange={(e) => onChangeGlobal?.(e.target.value)}
-                        placeholder="mis: 1.500.000 (kosongkan untuk gunakan total kategori)"
-                    />
-                    {expand && (
-                        <div className="mt-1 text-xs text-muted-foreground">
-                            {hasGlobal
-                                ? "Global terisi: input kategori WAJIB persen (mis. 10%)."
-                                : "Global kosong: input kategori WAJIB nominal (tanpa %). Global = jumlah kategori."}
-                        </div>
-                    )}
+    return (
+        <div className="px-4 space-y-3">
+            {/* Global + expand/collapse */}
+            <div className="mb-1">
+                <div className="w-full">
+                    <div className="flex gap-2 w-full">
+                        <Input
+                            value={valueGlobal}
+                            onChange={(e) => onChangeGlobal?.(e.target.value)}
+                            placeholder={`${expand ? `${hasGlobal?`Target Global Telah Ditentukan`:`Target global : Rp. ${fmt(calc.global)}`} ` : "Silakan tentukan target global  atau klik tombol di kanan untuk detail per kategori"}`}
+                            className="flex-1 min-w-0"
+                            autoComplete="off"
+                            aria-label="Target Global"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={toggleExpand}
+                            className="h-auto px-3 shrink-0"
+                            style={{ minHeight: 0 }}
+                            aria-label={expand ? "Sembunyikan pengaturan per kategori" : "Atur target per kategori"}
+                            title={expand ? "Sembunyikan pengaturan per kategori" : "Atur target per kategori"}
+                        >
+                            {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                    </div>
+
+
                 </div>
             </div>
 
             {/* Per-kategori */}
             {expand && (
-                <div className="space-y-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="space-y-3 mt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         {(katReady ? kategoriList : []).map((kat) => {
                             const raw = (valuePerKategori || {})[kat] ?? ""
                             const nominal = calc.perKategoriNominal[kat] ?? 0
+
+                            // baris info di bawah input:
+                            // - mode % : tampilkan "Rp. <nominal>"
+                            // - mode Rp: tampilkan "<pct>% dari total kategori"
+                            const info =
+                                calc.forcedMode === "%"
+                                    ? `= Rp. ${fmt(nominal)}`
+                                    : (() => {
+                                        const pct = totalKategori > 0 ? (nominal / totalKategori) * 100 : 0
+                                        return `= ${fmt(pct, 2)}%`
+                                    })()
+
                             return (
                                 <div key={kat} className="space-y-1">
-                                    <label className="text-sm">{kat}</label>
+                                    <label className="text-sm" htmlFor={`kat-${kat}`}>
+                                        {kat} <span className="text-muted-foreground">({calc.forcedMode})</span>
+                                    </label>
                                     <Input
+                                        id={`kat-${kat}`}
                                         value={raw}
-                                        onChange={(e) =>
-                                            onChangePerKategori?.((s) => ({ ...(typeof s === "function" ? s() : s), [kat]: e.target.value }))
-                                        }
-                                        placeholder={hasGlobal ? "cth: 10%" : "cth: 750000"}
+                                        onChange={(e) => setKatValue(kat, e.target.value)}
+                                        // placeholder={calc.forcedMode === "%" ? "mis: 10 atau 10%" : "mis: 750000"}
+                                        autoComplete="off"
+                                        inputMode="decimal"
+                                        aria-label={`Target kategori ${kat}`}
                                     />
-                                    <div className="text-xs text-muted-foreground">
-                                        {hasGlobal ? `= ${fmt(nominal)} (${raw || "0"})` : `= ${fmt(nominal)}`}
-                                    </div>
+                                    <div className="text-xs text-muted-foreground">{info}</div>
                                 </div>
                             )
                         })}
@@ -198,18 +233,21 @@ export default function TargetKomisi({
                         )}
                     </div>
 
+                    {/* Ringkasan & error */}
                     <div className="text-xs">
                         <div>
-                            Target Global Terhitung: <b>{fmt(calc.global)}</b>
+                            TOTAL TARGET : <b>Rp. {fmt(calc.global)}</b>
                         </div>
-                        {hasGlobal && (
-                            <div className="mt-1">
-                                Total Persentase Kategori: <b>{fmt(calc.totalPercent * 100, 2)}%</b> • Sisa:{" "}
-                                <b>
-                                    {fmt(calc.remainingPct * 100, 2)}% / {fmt(calc.remainingNominal)}
-                                </b>
-                            </div>
+
+                        {calc.forcedMode === "%" && (
+                            <>
+                                <div className="mt-1">
+                                    Total Persentase Kategori: <b>{fmt(calc.totalPercent * 100, 2)}%</b>{" "}
+                                    • Sisa: <b>{fmt(calc.remainingPct * 100, 2)}%</b> (Rp. <b>{fmt(calc.remainingNominal)}</b>)
+                                </div>
+                            </>
                         )}
+
                         {calc.error ? <div className="text-red-600 mt-1">{calc.error}</div> : null}
                     </div>
                 </div>

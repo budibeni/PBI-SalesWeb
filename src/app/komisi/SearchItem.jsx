@@ -51,7 +51,7 @@ export default function SearchItem({ onPick }) {
             value={null}
             onChange={handlePick}
             fetchData={fetchPicker}
-            placeholder="Cari produk (kode/nama)…"
+            placeholder="Cari dan tambahkan produk.."
             groupLabel="Pilih produk untuk ditambahkan"
             titleKey="kodeItem"
             descriptionKey="namaItem"
