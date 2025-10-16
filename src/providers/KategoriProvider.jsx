@@ -1,6 +1,7 @@
 "use client"
 
-import { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react"
+
 
 const LS_PAYLOAD = "kategori_all_payload"
 const LS_ETAG    = "kategori_all_etag"

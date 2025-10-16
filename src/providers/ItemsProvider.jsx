@@ -84,7 +84,7 @@ export default function ItemsProvider({ children }) {
                 "namaItem",
                 "deskripsi",
                 "kategori",
-                "jenisItem",          // pengganti merek
+                "jenisItem",
                 "harga",
                 "satuan",
                 "nilaiSatuan",
@@ -93,8 +93,8 @@ export default function ItemsProvider({ children }) {
                 "nilaiPenggunaan",
                 "satuanPenggunaan",
                 "deskripsiPenggunaan",
-                "gambarUrl",          // baru
-                "linkWeb",            // baru
+                "gambarUrl",
+                "linkWeb",
                 "diubahTanggal",
                 "dibuatTanggal",
             ].join(",")

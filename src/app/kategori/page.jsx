@@ -54,7 +54,7 @@ export default function KomisiPage() {
         <div className="p-4">
             <Card className="mx-auto max-w-4xl">
                 <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Master Komisi</CardTitle>
+                    <CardTitle>Master Kategori Komisi</CardTitle>
                     <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
               {loading ? "Memuat…" : `Total ${items.length} • Hal ${page}/${totalPages}`}
@@ -95,7 +95,7 @@ export default function KomisiPage() {
                             value={size}
                             onChange={(e) => { setSize(e.target.value); setPage(1) }}
                         >
-                            {PAGE_SIZES.map(s => <option key={s} value={s}>{s}/hal</option>)}
+                            {PAGE_SIZES.map(s => <option key={s} value={s}>{s} / halaman</option>)}
                         </select>
                     </form>
 
