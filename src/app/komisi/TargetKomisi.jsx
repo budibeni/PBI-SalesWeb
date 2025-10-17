@@ -168,7 +168,7 @@ export default function TargetKomisi({
                         <Input
                             value={valueGlobal}
                             onChange={(e) => onChangeGlobal?.(e.target.value)}
-                            placeholder={`${expand ? `${hasGlobal?`Target Global Telah Ditentukan`:`Target global : Rp. ${fmt(calc.global)}`} ` : "Silakan tentukan target global  atau klik tombol di kanan untuk detail per kategori"}`}
+                            placeholder={`${expand ? `${hasGlobal?`Target Global Telah Ditentukan`:`Target global : Rp. ${fmt(calc.global)}`} ` : "Silakan tentukan target"}`}
                             className="flex-1 min-w-0"
                             autoComplete="off"
                             aria-label="Target Global"

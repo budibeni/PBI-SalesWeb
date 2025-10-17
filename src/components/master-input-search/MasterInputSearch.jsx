@@ -1,4 +1,4 @@
-// File: components/master-input-search/MasterInputSearch.jsx
+// components/master-input-search/MasterInputSearch.jsx
 "use client";
 import * as React from "react";
 import {
@@ -7,12 +7,11 @@ import {
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Search } from "lucide-react";
 
 import useVisualViewportSize from "@/hooks/useVisualViewportSize";
 import { useIsMobile } from "@/hooks/useIsMobile";
 
-// utils
 const get = (obj, path) => (path || "").split(".").reduce((acc, k) => (acc == null ? acc : acc[k]), obj);
 function useDebounce(value, ms = 250) {
     const [v, setV] = React.useState(value);
@@ -23,16 +22,11 @@ function useDebounce(value, ms = 250) {
     return v;
 }
 
-/**
- * BASE: MasterInputSearch
- * Semua logika inti dipusatkan di sini. Tampilan item ditentukan oleh prop renderItem.
- */
 const MasterInputSearch = React.forwardRef(function MasterInputSearch(
     {
-        // data & behavior
         value,
         onChange,
-        fetchData, // (q) => Promise<rows[]>
+        fetchData,
         searchKeys,
         placeholder = "Cari dan pilih data…",
         emptyText = "Tidak ada data.",
@@ -45,8 +39,9 @@ const MasterInputSearch = React.forwardRef(function MasterInputSearch(
         allowClear = true,
         buttonClassName = "w-full justify-between",
         popoverClassName = "",
+        isResponsive = false, // <-- NEW
 
-        // helpers untuk mapping field dasar (opsional; dipakai oleh helpers)
+        // helpers
         titleKey,
         descriptionKey,
         imageKey,
@@ -54,10 +49,10 @@ const MasterInputSearch = React.forwardRef(function MasterInputSearch(
         getDescription,
         getImageSrc,
 
-        // kustomisasi rendering
-        renderItem, // (row, helpers) => ReactNode
-        getItemValue, // (row, helpers) => string
-        groupHeaderExtra, // ReactNode; tambahan header di dalam CommandGroup (mis. header tabel)
+        // render kustom
+        renderItem,
+        getItemValue,
+        groupHeaderExtra,
 
         onClear,
     },
@@ -74,16 +69,16 @@ const MasterInputSearch = React.forwardRef(function MasterInputSearch(
     const isMobile = useIsMobile();
     const vvHeight = useVisualViewportSize(open);
 
-    // helpers
     const titleOf = (row) => getTitle?.(row) ?? (titleKey ? String(get(row, titleKey) ?? "") : "");
-    const descOf = (row) => getDescription?.(row) ?? (descriptionKey ? String(get(row, descriptionKey) ?? "") : "");
-    const imgOf = (row) => getImageSrc?.(row) ?? (imageKey ? String(get(row, imageKey) ?? "") : "");
+    const descOf  = (row) => getDescription?.(row) ?? (descriptionKey ? String(get(row, descriptionKey) ?? "") : "");
+    const imgOf   = (row) => getImageSrc?.(row) ?? (imageKey ? String(get(row, imageKey) ?? "") : "");
 
     const defaultItemValueOf = (row) => {
         const keys = searchKeys?.length ? searchKeys : [titleKey, descriptionKey].filter(Boolean);
         return String(keys.map((k) => get(row, k)).filter(Boolean).join(" "));
     };
-    const itemValueOf = (row) => (getItemValue ? getItemValue(row, { titleOf, descOf, imgOf, get }) : defaultItemValueOf(row)) || "";
+    const itemValueOf = (row) =>
+        (getItemValue ? getItemValue(row, { titleOf, descOf, imgOf, get }) : defaultItemValueOf(row)) || "";
 
     React.useEffect(() => {
         if (!open) return;
@@ -120,25 +115,45 @@ const MasterInputSearch = React.forwardRef(function MasterInputSearch(
         })()
         : null;
 
+    const isIconOnly = isResponsive && isMobile;
+
     const Trigger = (
-        <Button type="button" variant="outline" className={buttonClassName} disabled={disabled} onClick={() => setOpen(true)}>
-            <span className={`truncate ${!label ? "opacity-60" : ""}`}>{label || placeholder}</span>
-            <span className="flex items-center gap-2">
-        {allowClear && value && !disabled && (
-            <button
-                type="button"
-                className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted"
-                title="Hapus"
-                aria-label="Hapus pilihan"
-                onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); doClear(); }}
-            >
-                <X className="h-4 w-4 opacity-60 hover:opacity-100" />
-            </button>
-        )}
-                <kbd className="hidden md:inline-block text-[10px] opacity-60">Enter pilih</kbd>
-      </span>
+        <Button
+            type="button"
+            variant="outline"
+            className={`${buttonClassName}`}
+            disabled={disabled}
+            onClick={() => setOpen(true)}
+            aria-label={isIconOnly ? "Cari & pilih data" : (label || placeholder)}
+            title={isIconOnly ? "Cari" : (label || placeholder)}
+        >
+            {isIconOnly ? (
+                // Trigger ikon-only (khusus mobile + isResponsive)
+                <Search className="h-5 w-5 opacity-70" />
+            ) : (
+                // Trigger normal (teks + optional clear)
+                <span className="flex items-center justify-between w-full">
+          <span className={`truncate ${!label ? "opacity-60" : ""}`}>
+            {label || placeholder}
+          </span>
+          <span className="flex items-center gap-2">
+            {allowClear && value && !disabled && (
+                <button
+                    type="button"
+                    className="inline-flex h-5 w-5 items-center justify-center rounded hover:bg-muted"
+                    title="Hapus"
+                    aria-label="Hapus pilihan"
+                    onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); doClear(); }}
+                >
+                    <X className="h-4 w-4 opacity-60 hover:opacity-100" />
+                </button>
+            )}
+              <kbd className="hidden md:inline-block text-[10px] opacity-60">Enter pilih</kbd>
+          </span>
+        </span>
+            )}
         </Button>
     );
 
@@ -148,7 +163,12 @@ const MasterInputSearch = React.forwardRef(function MasterInputSearch(
             <CommandGroup heading={groupLabel}>
                 {groupHeaderExtra}
                 {rows.map((row, i) => (
-                    <CommandItem key={i} value={itemValueOf(row)} onSelect={() => handleSelect(row)} className="cursor-pointer">
+                    <CommandItem
+                        key={i}
+                        value={itemValueOf(row)}
+                        onSelect={() => handleSelect(row)}
+                        className="cursor-pointer"
+                    >
                         {renderItem
                             ? renderItem(row, { titleOf, descOf, imgOf, get })
                             : (
@@ -170,7 +190,10 @@ const MasterInputSearch = React.forwardRef(function MasterInputSearch(
             <>
                 {Trigger}
                 <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogContent className="p-0 gap-0 border-0 rounded-none !max-w-none !w-screen overflow-y-auto" style={{ height: vvHeight ? `${vvHeight}px` : "100dvh" }}>
+                    <DialogContent
+                        className="p-0 gap-0 border-0 rounded-none !max-w-none !w-screen overflow-y-auto"
+                        style={{ height: vvHeight ? `${vvHeight}px` : "100dvh" }}
+                    >
                         <div className="flex flex-col min-h-full pb-[env(safe-area-inset-bottom)]">
                             <Command className="flex-1">
                                 <CommandInput placeholder={placeholder} value={q} onValueChange={setQ} />

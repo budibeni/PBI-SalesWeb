@@ -78,14 +78,14 @@ export default function SearchItem({
     }
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
-            {/* Input pencarian produk (ambil sisa lebar) */}
-            <div className="flex-1 min-w-0">
+        <div className="flex flex-row items-center gap-2 w-full">
+            {/* Input pencarian produk: w-24 di mobile, flex-1 di desktop */}
+            <div className="sm:flex-1 sm:w-auto min-w-0">
                 <MasterInputSearchTitleDesc
                     value={null}
                     onChange={handlePick}
                     fetchData={fetchPicker}
-                    placeholder="Cari dan tambahkan produk…"
+                    placeholder="Cari produk…"
                     groupLabel={
                         selectedCat === CAT_ALL
                             ? "Pilih produk untuk ditambahkan"
@@ -96,12 +96,13 @@ export default function SearchItem({
                     buttonClassName="w-full justify-between"
                     popoverClassName="min-w-[28rem]"
                     allowClear={false}
+                    isResponsive={true}
                     disabled={!katReady && (kategoriItems || []).length === 0}
                 />
             </div>
 
-            {/* Filter kategori di kanan */}
-            <div className="w-full sm:w-48 shrink-0">
+            {/* Filter kategori: sisa lebar di mobile, w-48 di desktop */}
+            <div className="flex-1 sm:flex-none sm:w-48">
                 <Select value={selectedCat} onValueChange={onChangeCategory}>
                     <SelectTrigger className="w-full">
                         <SelectValue placeholder="Filter kategori" />

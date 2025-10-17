@@ -46,7 +46,7 @@ export default function AchTarget({ valuePerKategori = {}, onChangePerKategori, 
     const setKat = React.useMemo(() => makeObjUpdater(onChangePerKategori), [onChangePerKategori])
 
     return (
-        <div className="px-4 sm:px-6 space-y-3">
+        <div className="px-4 sm:px-6 space-y-1">
             {/* Header flex: kiri label + kanan total */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
                 <div className="text-sm font-medium">Achievement (%)</div>
@@ -56,7 +56,7 @@ export default function AchTarget({ valuePerKategori = {}, onChangePerKategori, 
             </div>
 
             {/* Grid input per kategori */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-3">
                 {(katReady ? kategoriList : []).map((kat) => {
                     const raw = valuePerKategori[kat] ?? ""
                     const pct = byKategoriPct[kat] ?? 0
@@ -65,7 +65,7 @@ export default function AchTarget({ valuePerKategori = {}, onChangePerKategori, 
                             <label className="text-sm" htmlFor={`ach-${kat}`}>
                                 {kat}
                             </label>
-                            <div className="relative">
+                            <div className="relative mt-1">
                                 <Input
                                     id={`ach-${kat}`}
                                     value={raw}
@@ -76,8 +76,8 @@ export default function AchTarget({ valuePerKategori = {}, onChangePerKategori, 
                                     className="pr-10"
                                 />
                                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  %
-                </span>
+                                  %
+                                </span>
                             </div>
 
                         </div>

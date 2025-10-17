@@ -85,7 +85,7 @@ export default function SearchItem({
                     value={null}
                     onChange={handlePick}
                     fetchData={fetchPicker}
-                    placeholder="Cari dan tambahkan produk…"
+                    placeholder="Cari dan tambahkan produk… xx"
                     groupLabel={
                         selectedCat === CAT_ALL
                             ? "Pilih produk untuk ditambahkan"
@@ -96,6 +96,7 @@ export default function SearchItem({
                     buttonClassName="w-full justify-between"
                     popoverClassName="min-w-[28rem]"
                     allowClear={false}
+                    isResponsive={true}
                     disabled={!katReady && (kategoriItems || []).length === 0}
                 />
             </div>

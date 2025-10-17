@@ -78,11 +78,11 @@ export default function TableProduk({
                                             </div>
                                             {String(filterKategori).toLowerCase() === CAT_ALL.toLowerCase() && it.kategori && (
                                                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                          {it.kategori}
-                        </span>
+                                              {it.kategori}
+                                            </span>
                                             )}
                                         </div>
-                                        <div className="text-xs text-muted-foreground leading-tight">
+                                        <div className="text-xs text-muted-foreground leading-tight mt-1">
                                             {it.namaItem || ""}
                                         </div>
                                     </TableCell>
