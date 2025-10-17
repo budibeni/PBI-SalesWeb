@@ -61,13 +61,17 @@ model TbMasterItem {
 }
 
 model TbMasterKomisi {
-  id            String   @id @default(cuid())
-  kategori      String   @unique
-  persentase    Float?
-  dibuatOleh    String?
-  dibuatTanggal DateTime @default(now())
-  diubahOleh    String?
-  diubahTanggal DateTime @updatedAt
+  id               String   @id @default(cuid())
+  kategori         String   @unique
+  persentase       Float?
+  minTarget        Float?
+  maxTarget        Float?
+  persentaseBonus1 Float?
+  persentaseBonus2 Float?
+  dibuatOleh       String?
+  dibuatTanggal    DateTime @default(now())
+  diubahOleh       String?
+  diubahTanggal    DateTime @updatedAt
 }
 
 model TbSkenarioKomisi {

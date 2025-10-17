@@ -160,7 +160,7 @@ export default function TargetKomisi({
     const totalKategori = Object.values(calc.perKategoriNominal || {}).reduce((a, b) => a + b, 0)
 
     return (
-        <div className="px-4 space-y-3">
+        <div className="px-2 sm:px-4 space-y-3">
             {/* Global + expand/collapse */}
             <div className="mb-1">
                 <div className="w-full">
@@ -194,7 +194,7 @@ export default function TargetKomisi({
             {/* Per-kategori */}
             {expand && (
                 <div className="space-y-3 mt-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {(katReady ? kategoriList : []).map((kat) => {
                             const raw = (valuePerKategori || {})[kat] ?? ""
                             const nominal = calc.perKategoriNominal[kat] ?? 0

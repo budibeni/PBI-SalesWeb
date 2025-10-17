@@ -5,11 +5,12 @@ import React from "react"
 import useItems from "@/hooks/useItems"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RefreshCcw, Trash2 } from "lucide-react"
+import {CircleEqual, RefreshCcw, Save, Sigma, Trash2} from "lucide-react"
 import { fmt, toNum } from "./utils"
 import TargetKomisi from "./TargetKomisi"
 import SearchItem from "./SearchItem"
 import TableProduk from "./TableProduk"
+import AchTarget from "@/app/komisi/AchTarget";
 
 const CAT_ALL = "__ALL__"
 
@@ -78,8 +79,8 @@ export default function SimulasiPage() {
 
     return (
         <div>
-            <Card className="mx-auto max-w-6xl">
-                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2">
+            <Card className="mx-auto max-w-6xl py-4 sm:py-6">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
                     <CardTitle className="text-base sm:text-lg">Target Komisi</CardTitle>
 
                     <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
@@ -108,6 +109,16 @@ export default function SimulasiPage() {
                         >
                             <Trash2 className="h-4 w-4 sm:mr-1" />
                             <span className="hidden sm:inline">Bersihkan</span>
+                        </Button>
+                        {/* Tombol Simpan */}
+                        <Button
+                            onClick={() => setRows([])}
+                            disabled={rows.length === 0}
+                            className="sm:w-auto flex items-center justify-center gap-1"
+                            title="Simpan"
+                        >
+                            <Save className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Simpan</span>
                         </Button>
                     </div>
                 </CardHeader>
@@ -142,10 +153,18 @@ export default function SimulasiPage() {
                         filterKategori={selectedCat}   // <-- penting: hide baris non-kategori
                     />
 
-                    <div className="text-xs text-muted-foreground">
-                        Subtotal dihitung: <b>(Harga × Qty) × Persen</b> • MSRP adalah harga dari master item (read-only).
-                    </div>
+
                 </CardContent>
+            </Card>
+
+            <Card className="mx-auto max-w-6xl mt-4">
+                <AchTarget
+                    valueGlobal={targetGlobalRaw}
+                    onChangeGlobal={setTargetGlobalRaw}
+                    valuePerKategori={targetPerKategoriRaw}
+                    onChangePerKategori={setTargetPerKategoriRaw}
+                    onComputed={setTargetComputed}
+                />
             </Card>
         </div>
     )
