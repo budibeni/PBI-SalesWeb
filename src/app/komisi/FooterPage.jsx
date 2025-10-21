@@ -25,7 +25,7 @@ export default function FooterPage({
         <div
             className={cn(
                 "bg-background/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur-md",
-                "border-t px-3 sm:px-4 py-3 sm:py-4",
+                "border-t  py-3 sm:py-4",
                 className
             )}
             role="contentinfo"
@@ -44,7 +44,7 @@ export default function FooterPage({
                 <StatCard
                     icon={<Gift className="h-4 w-4" />}
                     label="Bonus"
-                    value={`Rp. ${nf(bonus1)}`}
+                    value={`+Rp. ${nf(bonus1)}`}
                     tone="green"
                 />
 
@@ -52,7 +52,7 @@ export default function FooterPage({
                 <StatCard
                     icon={<GiftIcon className="h-4 w-4" />}
                     label="Extra Bonus"
-                    value={`Rp. ${nf(bonus2)}`}
+                    value={`+Rp. ${nf(bonus2)}`}
                     tone="green"
                 />
 

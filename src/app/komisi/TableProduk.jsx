@@ -3,12 +3,24 @@
 
 import React from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {Sigma, Trash2, Lock, Unlock, RotateCcw, Grid2X2, Grid2X2Check} from "lucide-react"
-import { fmt, toNum } from "./utils"
+import { Trash2, Lock, Unlock, Grid2X2Check, ChevronUp, ChevronDown } from "lucide-react"
+import { fmt } from "./utils"
+
+import {
+    asNum, ROUND2, normPct,
+    MIN_RATIO, MAX_RATIO, MIN_QTY,
+    parseTargetKomisiObj,
+    recommendScope,
+    enforceGlobalCap,
+    subOf
+} from "./komisiLogic"
+import NumericInput from "@/components/ui/NumericInput";
 
 const CAT_ALL = "__ALL__"
+
+// konversi number -> numeric string "dot-decimal" untuk disimpan di state
+const toNumericString = (n) => String(ROUND2(n))
 
 export default function TableProduk({
                                         rows,
@@ -16,6 +28,9 @@ export default function TableProduk({
                                         onChangeRow,
                                         onRemoveRow,
                                         filterKategori = CAT_ALL,
+                                        expand = false,
+                                        onExpandChange = () => {},
+                                        targetKomisi = null, // { global, perKategori }
                                     }) {
     const itemById = React.useMemo(() => {
         const m = new Map(items.map((it) => [it.id, it]))
@@ -33,18 +48,59 @@ export default function TableProduk({
         })
     }, [rows, filterKategori, itemById])
 
-    // Apakah ada baris yang dikunci
-    const hasLocked = React.useMemo(() => visibleRows.some((r) => r.qtyLocked), [visibleRows])
+    const totalKomisiDasar = React.useMemo(
+        () => visibleRows.reduce((sum, r) => sum + subOf(r), 0),
+        [visibleRows]
+    )
 
-    // Hitung total subtotal (komisi dasar)
-    const totalKomisiDasar = React.useMemo(() => {
-        return visibleRows.reduce((sum, r) => {
-            const harga = toNum(r.harga)
-            const qty = toNum(r.qty)
-            const persen = Number(r.persen || 0)
-            return sum + (harga * qty * persen)
-        }, 0)
-    }, [visibleRows])
+    const applyPatch = React.useCallback((patchMap) => {
+        // patchMap: { id: { harga?: number, qty?: number } }
+        Object.entries(patchMap || {}).forEach(([id, data]) => {
+            const next = {}
+            if (data.harga !== undefined) next.harga = toNumericString(data.harga)
+            if (data.qty !== undefined)   next.qty   = toNumericString(data.qty)
+            if (Object.keys(next).length) onChangeRow?.(id, next)
+        })
+    }, [onChangeRow])
+
+    const recommend = () => {
+        const cfg = parseTargetKomisiObj(targetKomisi)
+        if (!cfg || cfg.mode === "NONE") {
+            alert("Target komisi belum ditentukan.")
+            return
+        }
+
+        const categoryOf = (r) => {
+            const it = itemById(r.id) || {}
+            return String(it.kategori || "").toLowerCase()
+        }
+
+        let allPatch = {}
+
+        if (cfg.mode === "GLOBAL") {
+            allPatch = { ...allPatch, ...recommendScope(rows, cfg.global) }
+        } else if (cfg.mode === "BY_CATEGORY") {
+            // 1) per kategori
+            cfg.perCat.forEach((targetVal, katKey) => {
+                const scope = rows.filter((r) => categoryOf(r) === String(katKey).toLowerCase())
+                if (scope.length === 0) return
+                Object.assign(allPatch, recommendScope(scope, targetVal))
+            })
+            // 2) cap global (jika diisi)
+            if (cfg.global) {
+                // snapshot numeric untuk global cap
+                const snap = rows.map((r) => {
+                    const p = allPatch[r.id]
+                    const hargaNum = p?.harga ?? asNum(r.harga)
+                    const qtyNum   = p?.qty   ?? asNum(r.qty)
+                    return { ...r, harga: hargaNum, qty: qtyNum }
+                })
+                Object.assign(allPatch, enforceGlobalCap(snap, cfg.global))
+            }
+        }
+
+        applyPatch(allPatch)
+    }
 
     return (
         <div>
@@ -64,22 +120,23 @@ export default function TableProduk({
                     <TableBody>
                         {visibleRows.map((r) => {
                             const it = itemById(r.id) || {}
-                            const harga = toNum(r.harga)
-                            const qty = toNum(r.qty)
-                            const persen = Number(r.persen || 0)
-                            const subtotal = (harga * qty) * persen
+                            const msrp = Number(it?.msrp || r.msrp || 0)
+                            const minHarga = ROUND2(msrp * MIN_RATIO)
+                            const maxHarga = ROUND2(msrp * MAX_RATIO)
+
+                            const harga = asNum(r.harga)
+                            const qty = asNum(r.qty)
+                            const subtotal = harga * qty * normPct(r.persen)
 
                             return (
                                 <TableRow key={r.id}>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
-                                            <div className="font-medium leading-tight">
-                                                {it.kodeItem || "-"}
-                                            </div>
+                                            <div className="font-medium leading-tight">{it.kodeItem || "-"}</div>
                                             {String(filterKategori).toLowerCase() === CAT_ALL.toLowerCase() && it.kategori && (
                                                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                                              {it.kategori}
-                                            </span>
+                          {it.kategori}
+                        </span>
                                             )}
                                         </div>
                                         <div className="text-xs text-muted-foreground leading-tight mt-1">
@@ -87,26 +144,37 @@ export default function TableProduk({
                                         </div>
                                     </TableCell>
 
-                                    <TableCell className="text-right">{fmt(r.msrp || 0)}</TableCell>
+                                    <TableCell
+                                        className="text-right cursor-pointer"
+                                        onClick={() => onChangeRow?.(r.id, { harga: toNumericString(msrp) })}
+                                        title="Klik untuk set ke MSRP"
+                                    >
+                                        {fmt(msrp)}
+                                    </TableCell>
 
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-1">
+                                            <NumericInput
+                                                value={r.harga}
+                                                min={minHarga}
+                                                max={maxHarga}
+                                                onValue={(strNumeric) => onChangeRow?.(r.id, { harga: strNumeric })}
+                                                disabled={r.hargaLocked}
+                                                className="text-right w-24"
+                                            />
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                title="Kembalikan ke harga default (MSRP)"
-                                                onClick={() => onChangeRow?.(r.id, { harga: r.msrp || 0 })}
+                                                onClick={() => onChangeRow?.(r.id, { hargaLocked: !r.hargaLocked })}
+                                                title={r.hargaLocked ? "Buka kunci harga" : "Kunci harga"}
                                                 className="h-5 w-5"
                                             >
-                                                <RotateCcw className="h-4 w-4 text-muted-foreground" />
+                                                {r.hargaLocked ? (
+                                                    <Lock className="h-4 w-4 text-muted-foreground" />
+                                                ) : (
+                                                    <Unlock className="h-4 w-4 text-muted-foreground" />
+                                                )}
                                             </Button>
-                                            <Input
-                                                inputMode="decimal"
-                                                className="text-right w-24"
-                                                value={r.harga}
-                                                onChange={(e) => onChangeRow?.(r.id, { harga: e.target.value })}
-                                                placeholder="0"
-                                            />
                                         </div>
                                     </TableCell>
 
@@ -115,9 +183,7 @@ export default function TableProduk({
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                onClick={() =>
-                                                    onChangeRow?.(r.id, { qtyLocked: !r.qtyLocked })
-                                                }
+                                                onClick={() => onChangeRow?.(r.id, { qtyLocked: !r.qtyLocked })}
                                                 title={r.qtyLocked ? "Buka kunci Qty" : "Kunci Qty"}
                                                 className="h-5 w-5"
                                             >
@@ -127,13 +193,14 @@ export default function TableProduk({
                                                     <Unlock className="h-4 w-4 text-muted-foreground" />
                                                 )}
                                             </Button>
-                                            <Input
-                                                inputMode="decimal"
-                                                className="text-right w-24"
+
+                                            <NumericInput
                                                 value={r.qty}
+                                                min={MIN_QTY}
+                                                fixedDecimalScale={false}
+                                                onValue={(strNumeric) => onChangeRow?.(r.id, { qty: strNumeric })}
                                                 disabled={r.qtyLocked}
-                                                onChange={(e) => onChangeRow?.(r.id, { qty: e.target.value })}
-                                                placeholder="0"
+                                                className="text-right w-24"
                                             />
                                         </div>
                                     </TableCell>
@@ -142,7 +209,7 @@ export default function TableProduk({
                                         <div className="flex flex-col items-end gap-1">
                                             <div className="font-medium leading-tight">{fmt(subtotal)}</div>
                                             <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase mt-0.5 inline-block">
-                        (Rp. {fmt(subtotal / (qty || 1))} / {r.satuan || "-"})
+                        (Rp. {fmt(qty > 0 ? subtotal / qty : 0)} / {r.satuan || "-"})
                       </span>
                                         </div>
                                     </TableCell>
@@ -174,25 +241,32 @@ export default function TableProduk({
 
             {/* Footer aksi dan total */}
             <div className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                {hasLocked ? (
+                <div className="text-xs text-muted-foreground">
+                    Komisi Dasar (tampilan): <b>Rp. {fmt(totalKomisiDasar)}</b>
+                </div>
+
+                <div className="flex items-center gap-2">
                     <Button
                         size="sm"
                         variant="secondary"
                         className="sm:w-auto flex items-center justify-center gap-1"
                         title="Minta Rekomendasi"
+                        onClick={recommend}
                     >
                         <Grid2X2Check className="h-4 w-4 sm:mr-1" />
                         <span className="hidden sm:inline">Minta Rekomendasi</span>
                     </Button>
-                ) : (
-                    <div className="text-xs text-muted-foreground">
-                        Kunci beberapa harga atau qty untuk mendapatkan rekomendasi
-                    </div>
-                )}
 
-                {/* total komisi dasar */}
-                <div className="text-sm font-medium text-right w-full sm:w-auto">
-                    Komisi Dasar : <span className="font-semibold text-yellow-700 dark:text-yellow-500">Rp. {fmt(totalKomisiDasar)}</span>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="sm:w-auto flex items-center justify-center gap-1"
+                        title="Achievement"
+                        onClick={() => onExpandChange(!expand)}
+                    >
+                        <span>Achievement</span>
+                        {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
                 </div>
             </div>
         </div>

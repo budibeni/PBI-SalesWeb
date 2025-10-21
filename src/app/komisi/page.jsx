@@ -6,82 +6,89 @@ import useItems from "@/hooks/useItems"
 import { Card, CardContent } from "@/components/ui/card"
 import SearchItem from "./SearchItem"
 import TableProduk from "./TableProduk"
-import AchTarget from "@/app/komisi/AchTarget";
-import HeaderPage from "@/app/komisi/HeaderPage";
-import FooterPage from "@/app/komisi/FooterPage";
+import AchTarget from "./AchTarget"
+import HeaderPage from "./HeaderPage"
+import FooterPage from "./FooterPage"
+import { toNum } from "./utils"
 
 const CAT_ALL = "__ALL__"
 
 export default function SimulasiPage() {
     const { ready, loading, items, refresh } = useItems()
-    const [rows, setRows] = React.useState([])
-    const [targetGlobalRaw, setTargetGlobalRaw] = React.useState("")
-    const [targetPerKategoriRaw, setTargetPerKategoriRaw] = React.useState({})
+
+    // TargetKomisi (baru)
+    const [targetKomisi, setTargetKomisi] = React.useState({
+        global: "",
+        perKategori: {},
+    })
     const [targetComputed, setTargetComputed] = React.useState(null)
+
+    // Achievement (terpisah, tidak terkait HeaderPage)
+    const [achievementValue, setAchievementValue] = React.useState({})
+
+    // Filter
     const [selectedCat, setSelectedCat] = React.useState(CAT_ALL)
 
+    // Rows tabel
+    const [rows, setRows] = React.useState([])
     const onPick = (rowBaru) => {
         if (!rowBaru) return
         setRows((prev) => (prev.some((r) => r.id === rowBaru.id) ? prev : [...prev, rowBaru]))
     }
-
-    const onRemoveRow = (id) => {
-        setRows((prev) => prev.filter((x) => x.id !== id))
-    }
-
-    const onChangeRow = (id, patch) => {
+    const onRemoveRow = (id) => setRows((prev) => prev.filter((x) => x.id !== id))
+    const onChangeRow = (id, patch) =>
         setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
-    }
+
+    const komisiDasar = React.useMemo(
+        () => rows.reduce((sum, r) => sum + toNum(r.harga) * toNum(r.qty) * Number(r.persen || 0), 0),
+        [rows]
+    )
+    const bonus1 = 0
+    const bonus2 = 0
+
+    console.info('targetKomisi', targetKomisi)
 
     return (
         <div>
             <HeaderPage
-                loading             = {loading}
-                ready               = {ready}
-                rows                = {rows}
-                setRows             = {setRows}
-                refresh             = {refresh}
-                targetGlobalRaw     = {targetGlobalRaw}
-                setTargetGlobalRaw  = {setTargetGlobalRaw}
-                targetPerKategoriRaw= {targetPerKategoriRaw}
-                setTargetPerKategoriRaw= {setTargetPerKategoriRaw}
-                setTargetComputed   = {setTargetComputed}
+                loading={loading}
+                ready={ready}
+                rows={rows}
+                setRows={setRows}
+                refresh={refresh}
+                // TargetKomisi API baru:
+                targetKomisi={targetKomisi}
+                setTargetKomisi={setTargetKomisi}
+                onTargetComputed={setTargetComputed}
             />
 
             <Card className="mx-auto max-w-6xl mt-4">
                 <CardContent className="space-y-6">
-                    <SearchItem
-                        onPick          = {onPick}
-                        selectedCat     = {selectedCat}
-                        onChangeCategory= {setSelectedCat}
-                    />
-
+                    <SearchItem onPick={onPick} selectedCat={selectedCat} onChangeCategory={setSelectedCat} />
                     <TableProduk
-                        rows            = {rows}
-                        items           = {items}
-                        onChangeRow     = {onChangeRow}
-                        onRemoveRow     = {onRemoveRow}
-                        filterKategori  = {selectedCat}
+                        rows={rows}
+                        items={items}
+                        onChangeRow={onChangeRow}
+                        onRemoveRow={onRemoveRow}
+                        filterKategori={selectedCat}
+                        targetKomisi={targetKomisi}
                     />
                 </CardContent>
             </Card>
 
+            {/* AchTarget tetap independen dari HeaderPage */}
             <Card className="mx-auto max-w-6xl mt-4">
-                <AchTarget
-                    valueGlobal         = {targetGlobalRaw}
-                    onChangeGlobal      = {setTargetGlobalRaw}
-                    valuePerKategori    = {targetPerKategoriRaw}
-                    onChangePerKategori = {setTargetPerKategoriRaw}
-                    onComputed          = {setTargetComputed}
-                />
+                <CardContent>
+                    <AchTarget
+                        valuePerKategori={achievementValue}
+                        onChangePerKategori={setAchievementValue}
+                        onComputed={() => {}}
+                    />
+                </CardContent>
             </Card>
 
-            <div className="sticky bottom-0 left-0 right-0 z-40 py-2">
-                <FooterPage
-                    komisiDasar={2000000}   // number
-                    bonus1={2340}             // number
-                    bonus2={0}             // number
-                />
+            <div className="sticky bottom-0 left-0 right-0 z-40 py-2 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                <FooterPage komisiDasar={komisiDasar} bonus1={bonus1} bonus2={bonus2} />
             </div>
         </div>
     )
