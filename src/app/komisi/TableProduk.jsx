@@ -102,6 +102,18 @@ export default function TableProduk({
         applyPatch(allPatch)
     }
 
+    const hasTarget = React.useMemo(() => {
+        const cfg = parseTargetKomisiObj(targetKomisi);
+        if (!cfg || cfg.mode === "NONE") return false;
+        if (cfg.mode === "GLOBAL") return (cfg.global ?? 0) > 0;
+        if (cfg.mode === "BY_CATEGORY") {
+            const anyCat = cfg.perCat && cfg.perCat.size > 0;
+            const hasGlobalNominal = Number(cfg.global || 0) > 0;
+            return anyCat || hasGlobalNominal;
+        }
+        return false;
+    }, [targetKomisi]);
+
     return (
         <div>
             <div className="rounded-md border overflow-x-auto">
@@ -120,9 +132,10 @@ export default function TableProduk({
                     <TableBody>
                         {visibleRows.map((r) => {
                             const it = itemById(r.id) || {}
-                            const msrp = Number(it?.msrp || r.msrp || 0)
-                            const minHarga = ROUND2(msrp * MIN_RATIO)
-                            const maxHarga = ROUND2(msrp * MAX_RATIO)
+                            const msrp = Number(it?.msrp ?? r.msrp ?? 0);
+                            const hasMsrp = Number.isFinite(msrp) && msrp > 0;
+                            const minHarga = hasMsrp ? ROUND2(msrp * MIN_RATIO) : undefined;
+                            const maxHarga = hasMsrp ? ROUND2(msrp * MAX_RATIO) : undefined;
 
                             const harga = asNum(r.harga)
                             const qty = asNum(r.qty)
@@ -156,12 +169,15 @@ export default function TableProduk({
                                         <div className="flex items-center justify-end gap-1">
                                             <NumericInput
                                                 value={r.harga}
-                                                min={minHarga}
-                                                max={maxHarga}
+                                                softMin={hasMsrp ? ROUND2(msrp * 0.75) : undefined}
+                                                softMax={hasMsrp ? ROUND2(msrp * 1.25) : undefined}
+                                                fixedDecimalScale={false}          // set false kalau tak mau otomatis ",00"
                                                 onValue={(strNumeric) => onChangeRow?.(r.id, { harga: strNumeric })}
                                                 disabled={r.hargaLocked}
                                                 className="text-right w-24"
                                             />
+
+
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
@@ -196,12 +212,14 @@ export default function TableProduk({
 
                                             <NumericInput
                                                 value={r.qty}
-                                                min={MIN_QTY}
+                                                softMin={0.01}
                                                 fixedDecimalScale={false}
                                                 onValue={(strNumeric) => onChangeRow?.(r.id, { qty: strNumeric })}
                                                 disabled={r.qtyLocked}
                                                 className="text-right w-24"
                                             />
+
+
                                         </div>
                                     </TableCell>
 
@@ -242,20 +260,22 @@ export default function TableProduk({
             {/* Footer aksi dan total */}
             <div className="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="text-xs text-muted-foreground">
-                    Komisi Dasar (tampilan): <b>Rp. {fmt(totalKomisiDasar)}</b>
+                    Komisi Dasar : <b>Rp. {fmt(totalKomisiDasar)}</b>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        className="sm:w-auto flex items-center justify-center gap-1"
-                        title="Minta Rekomendasi"
-                        onClick={recommend}
-                    >
-                        <Grid2X2Check className="h-4 w-4 sm:mr-1" />
-                        <span className="hidden sm:inline">Minta Rekomendasi</span>
-                    </Button>
+                    {hasTarget && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="sm:w-auto flex items-center justify-center gap-1"
+                            title="Minta Rekomendasi"
+                            onClick={recommend}
+                        >
+                            <Grid2X2Check className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Minta Rekomendasi</span>
+                        </Button>
+                    )}
 
                     <Button
                         size="sm"
