@@ -5,6 +5,7 @@ import React from "react"
 import { useKategori } from "@/providers/KategoriProvider"
 import { Input } from "@/components/ui/input"
 import { fmt, toNum } from "./utils"
+import {Card, CardContent, CardHeader} from "@/components/ui/card";
 
 const makeObjUpdater = (setter) => (key, raw) => {
     setter((prev) => {
@@ -46,17 +47,17 @@ export default function AchTarget({ valuePerKategori = {}, onChangePerKategori, 
     const setKat = React.useMemo(() => makeObjUpdater(onChangePerKategori), [onChangePerKategori])
 
     return (
-        <div className="px-4 sm:px-6 space-y-1">
+        <Card className="space-y-1 mt-4">
             {/* Header flex: kiri label + kanan total */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
                 <div className="text-sm font-medium">Achievement (%)</div>
                 <div className="text-xs text-muted-foreground sm:text-right">
                     Total: <b>{fmt(totalPct, 2)}%</b>
                 </div>
-            </div>
+            </CardHeader>
 
             {/* Grid input per kategori */}
-            <div className="grid grid-cols-4 gap-3">
+            <CardContent className="grid grid-cols-4 gap-3">
                 {(katReady ? kategoriList : []).map((kat) => {
                     const raw = valuePerKategori[kat] ?? ""
                     const pct = byKategoriPct[kat] ?? 0
@@ -87,7 +88,7 @@ export default function AchTarget({ valuePerKategori = {}, onChangePerKategori, 
                 {katReady && kategoriList.length === 0 && (
                     <div className="text-xs text-muted-foreground">Tidak ada kategori.</div>
                 )}
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     )
 }

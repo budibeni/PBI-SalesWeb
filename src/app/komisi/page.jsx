@@ -4,7 +4,6 @@
 import React from "react"
 import useItems from "@/hooks/useItems"
 import { Card, CardContent } from "@/components/ui/card"
-import SearchItem from "./SearchItem"
 import TableProduk from "./TableProduk"
 import AchTarget from "./AchTarget"
 import HeaderPage from "./HeaderPage"
@@ -17,14 +16,11 @@ export default function SimulasiPage() {
     const { ready, loading, items, refresh } = useItems()
 
     // TargetKomisi (baru)
-    const [targetKomisi, setTargetKomisi] = React.useState({
-        global: "",
-        perKategori: {},
-    })
+    const [targetKomisi, setTargetKomisi] = React.useState({ global: "", perKategori: {} })
     const [targetComputed, setTargetComputed] = React.useState(null)
 
-    // Achievement (terpisah, tidak terkait HeaderPage)
-    const [achievementValue, setAchievementValue] = React.useState({})
+    // Achievement visibility (pakai onExpandChange)
+    const [showAchTarget, setShowAchTarget] = React.useState(false)
 
     // Filter
     const [selectedCat, setSelectedCat] = React.useState(CAT_ALL)
@@ -36,8 +32,7 @@ export default function SimulasiPage() {
         setRows((prev) => (prev.some((r) => r.id === rowBaru.id) ? prev : [...prev, rowBaru]))
     }
     const onRemoveRow = (id) => setRows((prev) => prev.filter((x) => x.id !== id))
-    const onChangeRow = (id, patch) =>
-        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+    const onChangeRow = (id, patch) => setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
     const komisiDasar = React.useMemo(
         () => rows.reduce((sum, r) => sum + toNum(r.harga) * toNum(r.qty) * Number(r.persen || 0), 0),
@@ -45,8 +40,6 @@ export default function SimulasiPage() {
     )
     const bonus1 = 0
     const bonus2 = 0
-
-    console.info('targetKomisi', targetKomisi)
 
     return (
         <div>
@@ -56,36 +49,33 @@ export default function SimulasiPage() {
                 rows={rows}
                 setRows={setRows}
                 refresh={refresh}
-                // TargetKomisi API baru:
                 targetKomisi={targetKomisi}
                 setTargetKomisi={setTargetKomisi}
                 onTargetComputed={setTargetComputed}
             />
 
-            <Card className="mx-auto max-w-6xl mt-4">
-                <CardContent className="space-y-6">
-                    <SearchItem onPick={onPick} selectedCat={selectedCat} onChangeCategory={setSelectedCat} />
-                    <TableProduk
-                        rows={rows}
-                        items={items}
-                        onChangeRow={onChangeRow}
-                        onRemoveRow={onRemoveRow}
-                        filterKategori={selectedCat}
-                        targetKomisi={targetKomisi}
-                    />
-                </CardContent>
-            </Card>
+            <TableProduk
+                rows={rows}
+                items={items}
+                onChangeRow={onChangeRow}
+                onRemoveRow={onRemoveRow}
+                onPick={onPick}
+                selectedCat={selectedCat}
+                onChangeCategory={setSelectedCat}
+                targetKomisi={targetKomisi}
+                // PENTING: pakai state ini
+                expand={showAchTarget}
+                onExpandChange={setShowAchTarget}
+            />
 
-            {/* AchTarget tetap independen dari HeaderPage */}
-            <Card className="mx-auto max-w-6xl mt-4">
-                <CardContent>
-                    <AchTarget
-                        valuePerKategori={achievementValue}
-                        onChangePerKategori={setAchievementValue}
-                        onComputed={() => {}}
-                    />
-                </CardContent>
-            </Card>
+            {/* Tampilkan AchTarget hanya saat expand = true */}
+            {showAchTarget && (
+                <AchTarget
+                    valuePerKategori={{}}          // pakai state-mu sendiri jika ada
+                    onChangePerKategori={() => {}} // sesuaikan dgn implementasimu
+                    onComputed={() => {}}
+                />
+            )}
 
             <div className="sticky bottom-0 left-0 right-0 z-40 py-2 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <FooterPage komisiDasar={komisiDasar} bonus1={bonus1} bonus2={bonus2} />
