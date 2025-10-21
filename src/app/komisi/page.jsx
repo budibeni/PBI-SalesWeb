@@ -3,12 +3,10 @@
 
 import React from "react"
 import useItems from "@/hooks/useItems"
-import { Card, CardContent } from "@/components/ui/card"
 import TableProduk from "./TableProduk"
 import AchTarget from "./AchTarget"
 import HeaderPage from "./HeaderPage"
 import FooterPage from "./FooterPage"
-import { toNum } from "./utils"
 
 const CAT_ALL = "__ALL__"
 
@@ -17,10 +15,10 @@ export default function SimulasiPage() {
 
     // TargetKomisi (baru)
     const [targetKomisi, setTargetKomisi] = React.useState({ global: "", perKategori: {} })
-    const [targetComputed, setTargetComputed] = React.useState(null)
 
     // Achievement visibility (pakai onExpandChange)
     const [showAchTarget, setShowAchTarget] = React.useState(false)
+    const [komisiDasar, setKomisiDasar] = React.useState(0)
 
     // Filter
     const [selectedCat, setSelectedCat] = React.useState(CAT_ALL)
@@ -34,10 +32,7 @@ export default function SimulasiPage() {
     const onRemoveRow = (id) => setRows((prev) => prev.filter((x) => x.id !== id))
     const onChangeRow = (id, patch) => setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
-    const komisiDasar = React.useMemo(
-        () => rows.reduce((sum, r) => sum + toNum(r.harga) * toNum(r.qty) * Number(r.persen || 0), 0),
-        [rows]
-    )
+
     const bonus1 = 0
     const bonus2 = 0
 
@@ -51,7 +46,6 @@ export default function SimulasiPage() {
                 refresh={refresh}
                 targetKomisi={targetKomisi}
                 setTargetKomisi={setTargetKomisi}
-                onTargetComputed={setTargetComputed}
             />
 
             <TableProduk
@@ -63,9 +57,9 @@ export default function SimulasiPage() {
                 selectedCat={selectedCat}
                 onChangeCategory={setSelectedCat}
                 targetKomisi={targetKomisi}
-                // PENTING: pakai state ini
                 expand={showAchTarget}
                 onExpandChange={setShowAchTarget}
+                onKomisiDasarChange={setKomisiDasar}
             />
 
             {/* Tampilkan AchTarget hanya saat expand = true */}

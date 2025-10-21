@@ -18,8 +18,7 @@ import {
 } from "./komisiLogic"
 
 import NumericInput from "@/components/ui/NumericInput"
-import SearchItem from "@/app/komisi/SearchItem";
-
+import SearchItem from "@/app/komisi/SearchItem"
 
 const CAT_ALL = "__ALL__"
 const toNumericString = (n) => String(ROUND2(n))
@@ -35,6 +34,9 @@ export default function TableProduk({
                                         expand = false,
                                         onExpandChange = () => {},
                                         targetKomisi = null,
+
+                                        // 🔹 callback baru untuk kirim komisiDasar ke parent
+                                        onKomisiDasarChange,
                                     }) {
     const activeFilter = (selectedCat ?? CAT_ALL)
 
@@ -54,10 +56,24 @@ export default function TableProduk({
         })
     }, [rows, activeFilter, itemById])
 
+    // Komisi dasar untuk TAMPILAN (hanya baris yang terlihat sekarang)
     const totalKomisiDasar = React.useMemo(
         () => visibleRows.reduce((sum, r) => sum + subOf(r), 0),
         [visibleRows]
     )
+
+    // 🔹 Komisi dasar ALL ROWS (untuk dikirim ke parent)
+    const komisiDasarAll = React.useMemo(
+        () => rows.reduce((sum, r) => sum + subOf(r), 0),
+        [rows]
+    )
+
+    // 🔹 Kirim ke parent setiap berubah
+    React.useEffect(() => {
+        if (typeof onKomisiDasarChange === "function") {
+            onKomisiDasarChange(komisiDasarAll)
+        }
+    }, [komisiDasarAll, onKomisiDasarChange])
 
     const applyPatch = React.useCallback((patchMap) => {
         Object.entries(patchMap || {}).forEach(([id, data]) => {
@@ -146,7 +162,6 @@ export default function TableProduk({
                         return (
                             <Card key={r.id} className="overflow-hidden">
                                 <CardContent className="space-y-3">
-                                    {/* Header produk */}
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
                                             <div className="font-medium">{it.kodeItem || "-"}</div>
@@ -159,7 +174,6 @@ export default function TableProduk({
                                         )}
                                     </div>
 
-                                    {/* Harga (KEMBALI PAKAI softMin/softMax) */}
                                     <div className="grid grid-cols-12 items-center gap-2">
                                         <label className="col-span-4 text-sm text-muted-foreground">Harga</label>
                                         <div className="col-span-8 flex items-center justify-end gap-2">
@@ -185,7 +199,6 @@ export default function TableProduk({
                                         </div>
                                     </div>
 
-                                    {/* Qty */}
                                     <div className="grid grid-cols-12 items-center gap-2">
                                         <label className="col-span-4 text-sm text-muted-foreground">Qty</label>
                                         <div className="col-span-8 flex items-center justify-end gap-2">
@@ -210,7 +223,6 @@ export default function TableProduk({
                                         </div>
                                     </div>
 
-                                    {/* Subtotal + aksi hapus */}
                                     <div className="flex items-center justify-between">
                                         <div className="text-sm">
                                             <div className="font-semibold">Rp {fmt(subtotal)}</div>
@@ -289,7 +301,6 @@ export default function TableProduk({
 
                                             <TableCell className="text-right">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    {/* HARGA (KEMBALI PAKAI softMin/softMax) */}
                                                     <NumericInput
                                                         value={r.harga}
                                                         softMin={hasMsrp ? ROUND2(msrp * MIN_RATIO) : undefined}
@@ -367,75 +378,54 @@ export default function TableProduk({
                             </TableBody>
                         </Table>
                     </div>
+
+
                 </CardContent>
             </Card>
 
+            {/* Footer buttons */}
+            <div className="flex flex-col sm:flex-row w-full items-center gap-2">
+                {/* 🔹 Komisi Dasar: di atas (mobile), di tengah (desktop) */}
+                <div className="block sm:hidden text-xs text-muted-foreground w-full text-center">
+                    Komisi Dasar : <b>Rp. {fmt(totalKomisiDasar)}</b>
+                </div>
 
-            {/* Footer */}
-            <div className="flex w-full sm:w-auto items-center gap-2">
-                {/* Button Achievement — full lebar di mobile, auto di desktop */}
-                <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-1"
-                    title="Achievement"
-                    onClick={() => onExpandChange(!expand)}
-                >
-                    <span>Achievement</span>
-                    {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-
-                {/* Button Minta Rekomendasi */}
-                {hasTarget && (
+                <div className="flex w-full sm:w-full items-center justify-between gap-2">
+                    {/* Achievement */}
                     <Button
                         size="sm"
                         variant="outline"
-                        className="flex items-center justify-center gap-1 sm:ml-auto"
-                        title="Minta Rekomendasi"
-                        onClick={recommend}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1"
+                        title="Achievement"
+                        onClick={() => onExpandChange(!expand)}
                     >
-                        <Grid2X2Check className="h-4 w-4 sm:mr-1" />
-                        <span>Minta Rekomendasi</span>
+                        <span>Achievement</span>
+                        {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
-                )}
+
+                    {/* Komisi Dasar — hanya tampil di desktop */}
+                    <div className="hidden sm:block text-xs text-muted-foreground text-center flex-1">
+                        Komisi Dasar : <b>Rp. {fmt(totalKomisiDasar)}</b>
+                    </div>
+
+                    {/* Minta Rekomendasi — selalu paling kanan di desktop */}
+                    {hasTarget && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-1 sm:ml-auto sm:mr-0"
+                            title="Minta Rekomendasi"
+                            onClick={recommend}
+                        >
+                            <Grid2X2Check className="h-4 w-4 sm:mr-1" />
+                            <span>Minta Rekomendasi</span>
+                        </Button>
+                    )}
+                </div>
             </div>
 
 
 
-
-
-
-            {/*<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">*/}
-            {/*    /!*<div className="text-xs text-muted-foreground">*!/*/}
-            {/*    /!*    Komisi Dasar : <b>Rp. {fmt(totalKomisiDasar)}</b>*!/*/}
-            {/*    /!*</div>*!/*/}
-
-            {/*    <div className="flex items-center gap-2">*/}
-            {/*        {hasTarget && (*/}
-            {/*            <Button*/}
-            {/*                size="sm"*/}
-            {/*                variant="outline"*/}
-            {/*                className="sm:w-auto flex items-center justify-center gap-1"*/}
-            {/*                title="Minta Rekomendasi"*/}
-            {/*                onClick={recommend}*/}
-            {/*            >*/}
-            {/*                <Grid2X2Check className="h-4 w-4 sm:mr-1" />*/}
-            {/*                <span>Minta Rekomendasi</span>*/}
-            {/*            </Button>*/}
-            {/*        )}*/}
-
-            {/*        <Button*/}
-            {/*            size="sm"*/}
-            {/*            variant="outline"*/}
-            {/*            className="sm:w-auto flex items-center justify-center gap-1"*/}
-            {/*            title="Achievement"*/}
-            {/*            onClick={() => onExpandChange(!expand)}*/}
-            {/*        >*/}
-            {/*            <span>Achievement</span>*/}
-            {/*            {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}*/}
-            {/*        </Button>*/}
-            {/*    </div>*/}
-            {/*</div>*/}
         </div>
     )
 }

@@ -13,11 +13,8 @@ export default function HeaderPage({
                                        rows,
                                        setRows,
                                        refresh,
-
-                                       // API baru TargetKomisi:
                                        targetKomisi,           // { global: string, perKategori: Record<string,string> }
                                        setTargetKomisi,        // (next) => void
-                                       onTargetComputed,       // (calc) => void
                                    }) {
     return (
         <Card className="mx-auto max-w-6xl py-4 sm:py-6 gap-4 sm:gap-6">
@@ -58,7 +55,6 @@ export default function HeaderPage({
                 <TargetKomisi
                     targetKomisi={targetKomisi}
                     onChangeTargetKomisi={setTargetKomisi}
-                    onComputed={onTargetComputed}
                 />
             </CardContent>
         </Card>

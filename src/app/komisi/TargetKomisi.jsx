@@ -93,7 +93,6 @@ function computeTargets({ expand, targetKomisi }) {
 export default function TargetKomisi({
                                          targetKomisi,              // { global: string, perKategori: Record<string,string> }
                                          onChangeTargetKomisi,      // (nextObj) => void
-                                         onComputed,                // (calc) => void
                                      }) {
     const { items: kategoriItems, ready: katReady } = useKategori()
     const [expand, setExpand] = React.useState(false)
@@ -108,9 +107,6 @@ export default function TargetKomisi({
         [expand, targetKomisi]
     )
 
-    React.useEffect(() => {
-        onComputed?.(calc)
-    }, [calc, onComputed])
 
     const setGlobal = (val) => {
         onChangeTargetKomisi?.({
