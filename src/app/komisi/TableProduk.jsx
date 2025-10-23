@@ -179,6 +179,9 @@ export default function TableProduk({
                         const qty = asNum(r.qty)
                         const subtotal = harga * qty * normPct(r.persen)
 
+                        const kat = String(it.kategori || "").toUpperCase()
+                        const isNotDecimal = kat === "BOND" || kat === "SHIELD"
+
                         return (
                             <Card key={r.id} className="overflow-hidden">
                                 <CardContent className="space-y-3">
@@ -235,7 +238,8 @@ export default function TableProduk({
                                             <NumericInput
                                                 value={r.qty}
                                                 softMin={MIN_QTY}
-                                                fixedDecimalScale={false}
+                                                allowDecimal={!isNotDecimal}
+                                                fixedDecimalScale={true}
                                                 onValue={(val) => onChangeRow?.(r.id, { qty: val })}
                                                 disabled={r.qtyLocked}
                                                 className="text-right w-full order-1"
@@ -299,6 +303,9 @@ export default function TableProduk({
                                     const qty = asNum(r.qty)
                                     const subtotal = harga * qty * normPct(r.persen)
 
+                                    const kat = String(it.kategori || "").toUpperCase()
+                                    const isNotDecimal = kat === "BOND" || kat === "SHIELD"
+
                                     return (
                                         <TableRow key={r.id}>
                                             <TableCell>
@@ -357,7 +364,8 @@ export default function TableProduk({
                                                     <NumericInput
                                                         value={r.qty}
                                                         softMin={MIN_QTY}
-                                                        fixedDecimalScale={false}
+                                                        allowDecimal={!isNotDecimal}
+                                                        fixedDecimalScale={true}
                                                         onValue={(strNumeric) => onChangeRow?.(r.id, { qty: strNumeric })}
                                                         disabled={r.qtyLocked}
                                                         className="text-right w-24"
