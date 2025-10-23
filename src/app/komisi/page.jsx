@@ -1,4 +1,3 @@
-// app/komisi/page.jsx
 "use client"
 
 import React from "react"
@@ -13,28 +12,33 @@ const CAT_ALL = "__ALL__"
 export default function SimulasiPage() {
     const { ready, loading, items, refresh } = useItems()
 
-    // TargetKomisi (baru)
     const [targetKomisi, setTargetKomisi] = React.useState({ global: "", perKategori: {} })
-
-    // Achievement visibility (pakai onExpandChange)
     const [showAchTarget, setShowAchTarget] = React.useState(false)
     const [komisiDasar, setKomisiDasar] = React.useState(0)
-
-    // Filter
     const [selectedCat, setSelectedCat] = React.useState(CAT_ALL)
-
-    // Rows tabel
+    const [achievementValue, setAchievementValue] = React.useState({})
     const [rows, setRows] = React.useState([])
+
+    // 🧹 Fungsi untuk mengosongkan semua data
+    const onClear = React.useCallback(() => {
+        setRows([])
+        setKomisiDasar(0)
+        setAchievementValue({})
+        setTargetKomisi({ global: "", perKategori: {} })
+        setShowAchTarget(false)
+        setSelectedCat(CAT_ALL)
+    }, [])
+
+    // Picker
     const onPick = (rowBaru) => {
         if (!rowBaru) return
         setRows((prev) => (prev.some((r) => r.id === rowBaru.id) ? prev : [...prev, rowBaru]))
     }
+
     const onRemoveRow = (id) => setRows((prev) => prev.filter((x) => x.id !== id))
-    const onChangeRow = (id, patch) => setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
-
-    const bonus1 = 0
-    const bonus2 = 0
+    const onChangeRow = (id, patch) =>
+        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
     return (
         <div>
@@ -42,7 +46,7 @@ export default function SimulasiPage() {
                 loading={loading}
                 ready={ready}
                 rows={rows}
-                setRows={setRows}
+                clear={onClear} // 🔹 kirim ke HeaderPage
                 refresh={refresh}
                 targetKomisi={targetKomisi}
                 setTargetKomisi={setTargetKomisi}
@@ -62,17 +66,16 @@ export default function SimulasiPage() {
                 onKomisiDasarChange={setKomisiDasar}
             />
 
-            {/* Tampilkan AchTarget hanya saat expand = true */}
             {showAchTarget && (
                 <AchTarget
-                    valuePerKategori={{}}          // pakai state-mu sendiri jika ada
-                    onChangePerKategori={() => {}} // sesuaikan dgn implementasimu
-                    onComputed={() => {}}
+                    onComputed={(data) => {
+                        setAchievementValue(data)
+                    }}
                 />
             )}
 
             <div className="sticky bottom-0 left-0 right-0 z-40 py-2 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <FooterPage komisiDasar={komisiDasar} bonus1={bonus1} bonus2={bonus2} />
+                <FooterPage komisiDasar={komisiDasar} achvment={achievementValue} />
             </div>
         </div>
     )

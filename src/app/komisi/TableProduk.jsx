@@ -34,8 +34,6 @@ export default function TableProduk({
                                         expand = false,
                                         onExpandChange = () => {},
                                         targetKomisi = null,
-
-                                        // 🔹 callback baru untuk kirim komisiDasar ke parent
                                         onKomisiDasarChange,
                                     }) {
     const activeFilter = (selectedCat ?? CAT_ALL)
@@ -61,19 +59,6 @@ export default function TableProduk({
         () => visibleRows.reduce((sum, r) => sum + subOf(r), 0),
         [visibleRows]
     )
-
-    // 🔹 Komisi dasar ALL ROWS (untuk dikirim ke parent)
-    const komisiDasarAll = React.useMemo(
-        () => rows.reduce((sum, r) => sum + subOf(r), 0),
-        [rows]
-    )
-
-    // 🔹 Kirim ke parent setiap berubah
-    React.useEffect(() => {
-        if (typeof onKomisiDasarChange === "function") {
-            onKomisiDasarChange(komisiDasarAll)
-        }
-    }, [komisiDasarAll, onKomisiDasarChange])
 
     const applyPatch = React.useCallback((patchMap) => {
         Object.entries(patchMap || {}).forEach(([id, data]) => {
@@ -131,6 +116,41 @@ export default function TableProduk({
         }
         return false
     }, [targetKomisi])
+
+    /* === 🔹 Komisi dasar per-kategori (ALL ROWS) + ringkasan tampilan === */
+    const perCategoryKomisi = React.useMemo(() => {
+        const m = new Map()
+        rows.forEach((r) => {
+            const it = itemById(r.id) || {}
+            const namaKategoriAsli = (it.kategori ?? "").toString().trim()
+            const kategoriTampil = namaKategoriAsli || "Tanpa Kategori"
+            const nilai = subOf(r)
+            m.set(kategoriTampil, (m.get(kategoriTampil) || 0) + nilai)
+        })
+        return m
+    }, [rows, itemById])
+
+    const komisiSummaryParts = React.useMemo(() => {
+        return Array.from(perCategoryKomisi.entries())
+            .filter(([, v]) => v > 0) // opsional: tampilkan hanya yang > 0
+            .sort(([a], [b]) => a.localeCompare(b)) // rapi & konstan
+            .map(([nama, val]) => `${nama} (Rp. ${fmt(val)})`)
+    }, [perCategoryKomisi])
+
+    const grandTotalKomisi = React.useMemo(
+        () => Array.from(perCategoryKomisi.values()).reduce((a, b) => a + b, 0),
+        [perCategoryKomisi]
+    )
+
+    // 🔹 Kirim ke parent payload lengkap { total, perKategori }
+    React.useEffect(() => {
+        if (typeof onKomisiDasarChange === "function") {
+            onKomisiDasarChange({
+                total: grandTotalKomisi,
+                perKategori: Object.fromEntries(perCategoryKomisi.entries()),
+            })
+        }
+    }, [grandTotalKomisi, perCategoryKomisi, onKomisiDasarChange])
 
     /* ======================= UI ======================= */
     return (
@@ -378,17 +398,21 @@ export default function TableProduk({
                             </TableBody>
                         </Table>
                     </div>
-
-
                 </CardContent>
             </Card>
 
             {/* Footer buttons */}
             <div className="flex flex-col sm:flex-row w-full items-center gap-2">
-                {/* 🔹 Komisi Dasar: di atas (mobile), di tengah (desktop) */}
-                <div className="block sm:hidden text-xs text-muted-foreground w-full text-center">
-                    Komisi Dasar : <b>Rp. {fmt(totalKomisiDasar)}</b>
-                </div>
+                {/* 🔹 Komisi Dasar (ringkasan per-kategori) di atas (mobile) */}
+                <Card className="block sm:hidden text-xs text-muted-foreground w-full text-center p-2 mb-2">
+                    {komisiSummaryParts.length > 0 ? (
+                        <>
+                            {komisiSummaryParts.join(" + ")} = <b>Rp. {fmt(grandTotalKomisi)}</b>
+                        </>
+                    ) : (
+                        <>Komisi Dasar: <b>Rp. 0</b></>
+                    )}
+                </Card>
 
                 <div className="flex w-full sm:w-full items-center justify-between gap-2">
                     {/* Achievement */}
@@ -403,9 +427,15 @@ export default function TableProduk({
                         {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
 
-                    {/* Komisi Dasar — hanya tampil di desktop */}
+                    {/* Komisi Dasar — ringkasan di desktop (tengah) */}
                     <div className="hidden sm:block text-xs text-muted-foreground text-center flex-1">
-                        Komisi Dasar : <b>Rp. {fmt(totalKomisiDasar)}</b>
+                        {komisiSummaryParts.length > 0 ? (
+                            <>
+                                {komisiSummaryParts.join(" + ")} = <b>Rp. {fmt(grandTotalKomisi)}</b>
+                            </>
+                        ) : (
+                            <>Komisi Dasar: <b>Rp. 0</b></>
+                        )}
                     </div>
 
                     {/* Minta Rekomendasi — selalu paling kanan di desktop */}
@@ -422,10 +452,14 @@ export default function TableProduk({
                         </Button>
                     )}
                 </div>
+
+                {/* (Opsional) Info kategori aktif & total yang sedang terlihat */}
+                {String(activeFilter).toLowerCase() !== CAT_ALL.toLowerCase() && (
+                    <div className="block w-full text-[10px] text-muted-foreground text-center sm:hidden">
+                        (Kategori aktif: <b>{activeFilter}</b> → Rp. {fmt(totalKomisiDasar)})
+                    </div>
+                )}
             </div>
-
-
-
         </div>
     )
 }

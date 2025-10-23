@@ -11,10 +11,10 @@ export default function HeaderPage({
                                        loading,
                                        ready,
                                        rows,
-                                       setRows,
+                                       clear,
                                        refresh,
-                                       targetKomisi,           // { global: string, perKategori: Record<string,string> }
-                                       setTargetKomisi,        // (next) => void
+                                       targetKomisi,
+                                       setTargetKomisi,
                                    }) {
     return (
         <Card className="mx-auto max-w-6xl py-4 sm:py-6 gap-4 sm:gap-6">
@@ -31,8 +31,7 @@ export default function HeaderPage({
 
                 <Button
                     variant="outline"
-                    onClick={() => setRows([])}
-                    disabled={rows.length === 0}
+                    onClick={clear}
                     className="sm:w-auto flex items-center gap-1"
                     title="Bersihkan"
                 >
