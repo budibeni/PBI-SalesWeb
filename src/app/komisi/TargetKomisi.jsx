@@ -4,15 +4,23 @@
 import React from "react"
 import { useKategori } from "@/providers/KategoriProvider"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import NumericInput from "@/components/ui/NumericInput"
 import { ChevronDown, ChevronUp } from "lucide-react"
-import { fmt, toNum } from "./utils"
+import { fmt } from "./utils"   // hanya fmt yang masih digunakan
 
-// utils kecil
+/* ================= Helpers ================= */
 const isFilled = (v) => String(v ?? "").trim().length > 0
-const coerceNum = (v) => Math.max(0, toNum(String(v ?? "")))
+// Parser aman untuk nilai dari NumericInput (dot-decimal string -> number)
+const toNumAny = (raw) => {
+    const s = String(raw ?? "").trim()
+    if (!s) return 0
+    const n = Number(s) // NumericInput sudah kirim dot-decimal
+    return Number.isFinite(n) ? n : 0
+}
+const coerceNum = (v) => Math.max(0, toNumAny(v))
 const stripPercent = (s) => String(s ?? "").trim().replace(/%/g, "")
 
+/* ============== Core Computation ============== */
 function computeTargets({ expand, targetKomisi }) {
     const valueGlobal = targetKomisi?.global ?? ""
     const valuePerKategori = targetKomisi?.perKategori ?? {}
@@ -65,14 +73,16 @@ function computeTargets({ expand, targetKomisi }) {
     for (const [kat, raw] of Object.entries(valuePerKategori || {})) {
         const cleaned = stripPercent(raw)
         if (!isFilled(cleaned)) continue
-        const pct = Math.max(0, toNum(cleaned)) / 100
+        const pct = Math.max(0, toNumAny(cleaned)) / 100
         totalPercent += pct
         perKategoriNominal[kat] = g * pct
     }
+
     if (totalPercent - 1 > 1e-6) {
         const overPct = (totalPercent - 1) * 100
         error = `Total persentase kategori melebihi 100% (+${fmt(overPct, 2)}%).`
     }
+
     totalNominal = Object.values(perKategoriNominal).reduce((a, b) => a + b, 0)
     const remainingPct = Math.max(0, 1 - totalPercent)
     const remainingNominal = Math.max(0, g - totalNominal)
@@ -90,9 +100,10 @@ function computeTargets({ expand, targetKomisi }) {
     }
 }
 
+/* ============== Component ============== */
 export default function TargetKomisi({
-                                         targetKomisi,              // { global: string, perKategori: Record<string,string> }
-                                         onChangeTargetKomisi,      // (nextObj) => void
+                                         targetKomisi,
+                                         onChangeTargetKomisi,
                                      }) {
     const { items: kategoriItems, ready: katReady } = useKategori()
     const [expand, setExpand] = React.useState(false)
@@ -106,7 +117,6 @@ export default function TargetKomisi({
         () => computeTargets({ expand, targetKomisi }),
         [expand, targetKomisi]
     )
-
 
     const setGlobal = (val) => {
         onChangeTargetKomisi?.({
@@ -140,9 +150,10 @@ export default function TargetKomisi({
             {/* Global + expand/collapse */}
             <div className="w-full">
                 <div className="flex gap-2 w-full">
-                    <Input
+                    <NumericInput
                         value={targetKomisi?.global ?? ""}
-                        onChange={(e) => setGlobal(e.target.value)}
+                        onValue={setGlobal}
+                        decimalScale={0}
                         placeholder={
                             expand
                                 ? hasGlobal
@@ -151,8 +162,7 @@ export default function TargetKomisi({
                                 : "Silakan tentukan target"
                         }
                         className="flex-1 min-w-0"
-                        autoComplete="off"
-                        aria-label="Target Global"
+                        inputMode="decimal"
                     />
                     <Button
                         type="button"
@@ -167,8 +177,6 @@ export default function TargetKomisi({
                         }}
                         className="h-auto px-3 shrink-0"
                         style={{ minHeight: 0 }}
-                        aria-label={expand ? "Sembunyikan pengaturan per kategori" : "Atur target per kategori"}
-                        title={expand ? "Sembunyikan pengaturan per kategori" : "Atur target per kategori"}
                     >
                         {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
@@ -192,16 +200,15 @@ export default function TargetKomisi({
 
                             return (
                                 <div key={kat} className="space-y-1">
-                                    <label className="text-sm" htmlFor={`kat-${kat}`}>
+                                    <label className="text-sm">
                                         {kat} <span className="text-muted-foreground">({calc.forcedMode})</span>
                                     </label>
-                                    <Input
-                                        id={`kat-${kat}`}
+                                    <NumericInput
+                                        fixedDecimalScale={false}
+                                        decimalScale={calc.forcedMode === "%"?2:0}
                                         value={raw}
-                                        onChange={(e) => setPerKat(kat, e.target.value)}
-                                        autoComplete="off"
+                                        onValue={(v) => setPerKat(kat, v)}
                                         inputMode="decimal"
-                                        aria-label={`Target kategori ${kat}`}
                                     />
                                     <div className="text-xs text-muted-foreground">{info}</div>
                                 </div>
@@ -224,7 +231,7 @@ export default function TargetKomisi({
                             </div>
                         )}
 
-                        {calc.error ? <div className="text-red-600 mt-1">{calc.error}</div> : null}
+                        {calc.error && <div className="text-red-600 mt-1">{calc.error}</div>}
                     </div>
                 </div>
             )}

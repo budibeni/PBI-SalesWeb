@@ -66,13 +66,12 @@ export default function SimulasiPage() {
                 onKomisiDasarChange={setKomisiDasar}
             />
 
-            {showAchTarget && (
-                <AchTarget
-                    onComputed={(data) => {
-                        setAchievementValue(data)
-                    }}
-                />
-            )}
+            <AchTarget
+                show={showAchTarget}
+                onComputed={(data) => {
+                    setAchievementValue(data)
+                }}
+            />
 
             <div className="sticky bottom-0 left-0 right-0 z-40 py-2 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <FooterPage komisiDasar={komisiDasar} achvment={achievementValue} />
