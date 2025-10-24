@@ -42,7 +42,7 @@ export default function AchTarget({ show, onComputed }) {
                     <div className="text-sm font-medium">Achievement (%)</div>
                 </CardHeader>
 
-                <CardContent className="grid grid-cols-4 gap-3 mt-1">
+                <CardContent className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-1">
                     {(katReady ? kategoriList : []).map((kat) => {
                         const val = values[kat] ?? ""
                         return (
