@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import NumericInput from "@/components/ui/NumericInput";
 
 export default function NewItemPage() {
     const router = useRouter()
@@ -65,7 +66,7 @@ export default function NewItemPage() {
 
     return (
         <div className="p-4">
-            <Card className="mx-auto max-w-4xl">
+            <Card className="mx-auto max-w-6xl">
                 <CardHeader className="flex items-center justify-between">
                     <CardTitle>Item Baru</CardTitle>
                 </CardHeader>
@@ -74,45 +75,44 @@ export default function NewItemPage() {
                         {/* Umum */}
                         <section className="space-y-4">
                             <div>
-                                <div className="text-sm font-medium">Informasi Umum</div>
-                                <p className="text-xs text-muted-foreground">Data dasar item.</p>
+                                <div className="text-sm font-medium text-muted-foreground">Informasi Umum</div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 <Field label="Kode Item *">
                                     <Input value={f.kodeItem} onChange={(e)=>set("kodeItem", e.target.value)} placeholder="cth: PW-7,5X20X60" required />
                                 </Field>
                                 <Field label="Nama Item *">
                                     <Input value={f.namaItem} onChange={(e)=>set("namaItem", e.target.value)} placeholder="cth: AAC Power Block 7,5x20x60" required />
                                 </Field>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field label="Kategori">
                                     <Input value={f.kategori} onChange={(e)=>set("kategori", e.target.value)} placeholder="cth: BLOCK / SLAB / BOND / SHIELD" />
                                 </Field>
                                 <Field label="Jenis Item">
-                                    <Input value={f.jenisItem} onChange={(e)=>set("jenisItem", e.target.value)} placeholder="cth: POWER BLOCK" />
+                                    <Input value={f.jenisItem} onChange={(e)=>set("jenisItem", e.target.value)} placeholder="cth: BLOCK STANDARD" />
                                 </Field>
-                            </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <Field label="Harga (angka)">
-                                    <Input type="number" inputMode="decimal" value={f.harga} onChange={(e)=>set("harga", e.target.value)} placeholder="cth: 237000" />
-                                </Field>
                                 <Field label="Deskripsi">
                                     <Input value={f.deskripsi} onChange={(e)=>set("deskripsi", e.target.value)} placeholder="cth: Bata ringan berkualitas" />
+                                </Field>
+                                <Field label="Harga (Rp.)">
+                                    <NumericInput
+                                        value={f.harga}
+                                        onValue={(val) => set("harga", val)}
+                                        decimalScale={0}
+                                        fixedDecimalScale={false}
+                                        allowNegative={false}
+                                    />
                                 </Field>
                             </div>
                         </section>
 
-                        <Separator />
+                        <Separator className="mb-4" />
 
                         {/* Kalkulator / Konversi */}
                         <section className="space-y-4">
                             <div>
-                                <div className="text-sm font-medium">Kalkulator / Konversi</div>
-                                <p className="text-xs text-muted-foreground">Atur satuan item dan konversi satuan.</p>
+                                <div className="text-sm font-medium text-muted-foreground">Kalkulator / Konversi</div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -131,13 +131,12 @@ export default function NewItemPage() {
                             </div>
                         </section>
 
-                        <Separator />
+                        <Separator className="mb-4" />
 
                         {/* Penggunaan */}
                         <section className="space-y-4">
                             <div>
-                                <div className="text-sm font-medium">Penggunaan</div>
-                                <p className="text-xs text-muted-foreground">Cakupan / output pekerjaan dari satu item.</p>
+                                <div className="text-sm font-medium text-muted-foreground">Cakupan atau daya sebar item.</div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -153,13 +152,12 @@ export default function NewItemPage() {
                             </div>
                         </section>
 
-                        <Separator />
+                        <Separator className="mb-4" />
 
                         {/* Media */}
                         <section className="space-y-4">
                             <div>
-                                <div className="text-sm font-medium">Media</div>
-                                <p className="text-xs text-muted-foreground">Tambahkan URL gambar & tautan informasi produk.</p>
+                                <div className="text-sm font-medium text-muted-foreground">Media</div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

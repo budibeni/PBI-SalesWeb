@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Plus, Pencil, Trash2, RefreshCw, Search as SearchIcon } from "lucide-react"
 
+// ✅ gunakan path sesuai file yang kamu kirimkan
+import NumericInput from "@/components/ui/NumericInput"
+
 const PAGE_SIZES = ["10", "25", "50", "100"]
 
 export default function KomisiPage() {
@@ -52,7 +55,7 @@ export default function KomisiPage() {
 
     return (
         <div className="p-4">
-            <Card className="mx-auto max-w-4xl">
+            <Card className="mx-auto max-w-6xl">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>Master Kategori Komisi</CardTitle>
                     <div className="flex items-center gap-2">
@@ -171,6 +174,7 @@ export default function KomisiPage() {
 function CreateDialog({ onDone }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
+    // simpan sebagai string untuk kontrol NumericInput
     const [f, setF] = useState({ kategori: "", persentase: "" })
 
     const submit = async (e) => {
@@ -178,10 +182,15 @@ function CreateDialog({ onDone }) {
         if (!f.kategori.trim()) { alert("Kategori wajib diisi"); return }
         setBusy(true)
         try {
+            const payload = {
+                kategori: f.kategori,
+                // kirim number/null ke server
+                persentase: f.persentase === "" || f.persentase == null ? null : Number(f.persentase),
+            }
             const res = await fetch("/api/kategori", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(f),
+                body: JSON.stringify(payload),
             })
             const j = await res.json().catch(() => ({}))
             if (!res.ok) { alert(j.error || "Gagal tambah"); return }
@@ -200,13 +209,27 @@ function CreateDialog({ onDone }) {
                 <DialogHeader><DialogTitle>Tambah Komisi</DialogTitle></DialogHeader>
                 <form onSubmit={submit} className="space-y-4">
                     <Field label="Kategori *">
-                        <Input value={f.kategori} onChange={(e)=>setF(s=>({...s, kategori: e.target.value}))} placeholder="BLOCK / SLAB / BOND / SHIELD" />
+                        <Input
+                            value={f.kategori}
+                            onChange={(e) => setF(s => ({ ...s, kategori: e.target.value }))}
+                            placeholder="BLOCK / SLAB / BOND / SHIELD"
+                        />
                     </Field>
+
                     <Field label="Persentase (desimal)">
-                        <Input type="number" step="any" value={f.persentase} onChange={(e)=>setF(s=>({...s, persentase: e.target.value}))} placeholder="cth: 0.004 = 0.4%" />
+                        <NumericInput
+                            value={f.persentase}
+                            onValue={(val) => setF((s) => ({ ...s, persentase: val }))}
+                            decimalScale={8}
+                            fixedDecimalScale={false}
+                            allowNegative={false}
+                            placeholder="cth: 0.004 = 0.4%"
+                            className="w-full"
+                        />
                     </Field>
+
                     <div className="flex justify-end gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={()=>setOpen(false)} disabled={busy}>Batal</Button>
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
                         <Button type="submit" disabled={busy}>Simpan</Button>
                     </div>
                 </form>
@@ -219,10 +242,23 @@ function CreateDialog({ onDone }) {
 function EditDialog({ row, onDone }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
-    const [f, setF] = useState({ kategori: row.kategori, persentase: row.persentase ?? "" })
+
+    // helper: number -> string untuk kontrol NumericInput
+    const numToStr = (v) => (v == null || Number.isNaN(v) ? "" : String(v))
+
+    // simpan sebagai string
+    const [f, setF] = useState({
+        kategori: row.kategori,
+        persentase: numToStr(row.persentase),
+    })
 
     useEffect(() => {
-        if (open) setF({ kategori: row.kategori, persentase: row.persentase ?? "" })
+        if (open) {
+            setF({
+                kategori: row.kategori,
+                persentase: numToStr(row.persentase),
+            })
+        }
     }, [open, row])
 
     const submit = async (e) => {
@@ -230,10 +266,15 @@ function EditDialog({ row, onDone }) {
         if (!f.kategori.trim()) { alert("Kategori wajib diisi"); return }
         setBusy(true)
         try {
+            const payload = {
+                kategori: f.kategori,
+                // kirim number/null ke server
+                persentase: f.persentase === "" || f.persentase == null ? null : Number(f.persentase),
+            }
             const res = await fetch(`/api/kategori/${row.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(f),
+                body: JSON.stringify(payload),
             })
             const j = await res.json().catch(() => ({}))
             if (!res.ok) { alert(j.error || "Gagal update"); return }
@@ -251,13 +292,26 @@ function EditDialog({ row, onDone }) {
                 <DialogHeader><DialogTitle>Edit Komisi</DialogTitle></DialogHeader>
                 <form onSubmit={submit} className="space-y-4">
                     <Field label="Kategori *">
-                        <Input value={f.kategori} onChange={(e)=>setF(s=>({...s, kategori: e.target.value}))} />
+                        <Input
+                            value={f.kategori}
+                            onChange={(e) => setF(s => ({ ...s, kategori: e.target.value }))}
+                        />
                     </Field>
+
                     <Field label="Persentase (desimal)">
-                        <Input type="number" step="any" value={f.persentase} onChange={(e)=>setF(s=>({...s, persentase: e.target.value}))} />
+                        <NumericInput
+                            value={f.persentase}
+                            onValue={(val) => setF((s) => ({ ...s, persentase: val }))}
+                            decimalScale={6}
+                            fixedDecimalScale={false}
+                            allowNegative={false}
+                            placeholder="cth: 0.004 = 0.4%"
+                            className="w-full"
+                        />
                     </Field>
+
                     <div className="flex justify-end gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={()=>setOpen(false)} disabled={busy}>Batal</Button>
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
                         <Button type="submit" disabled={busy}>Simpan</Button>
                     </div>
                 </form>

@@ -32,7 +32,13 @@ import {
     Calculator,
     Image as ImageIcon,
     Link as LinkIcon,
+    Tag,
 } from "lucide-react"
+
+// formatter harga yg sudah ada di kode kamu
+import { fmt } from "@/app/komisi/utils"
+
+import NumericInput from "@/components/ui/NumericInput"
 
 const CAT_ALL = "__ALL__"
 const PAGE_SIZES = ["10","25","50","100","500","1000"]
@@ -158,6 +164,14 @@ export default function ItemsPage() {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-xl">Master Item</CardTitle>
                     <div className="flex items-center gap-2">
+                        {/* ➕ Edit Harga sekaligus */}
+                        <BulkHargaDialog
+                            disabled={selected.size === 0}
+                            count={selected.size}
+                            ids={[...selected]}
+                            onDone={async () => { await load() }}
+                        />
+                        {/* Edit Kalkulator (sudah ada) */}
                         <BulkCalcDialog
                             disabled={selected.size === 0}
                             count={selected.size}
@@ -238,14 +252,14 @@ export default function ItemsPage() {
                                             />
                                         </div>
                                     </TableHead>
-                                    <TableHead className="w-32">Kode</TableHead>
+                                    <TableHead>Kode</TableHead>
                                     <TableHead>Nama</TableHead>
-                                    <TableHead className="w-40">Kategori / Jenis</TableHead>
-                                    <TableHead className="w-24">Satuan</TableHead>
-                                    <TableHead className="w-52">Konversi</TableHead>
-                                    <TableHead className="w-56">Penggunaan</TableHead>
-                                    <TableHead className="w-40">Media</TableHead>
-                                    <TableHead className="w-24 text-right">Aksi</TableHead>
+                                    <TableHead>Kategori</TableHead>
+                                    <TableHead>Jenis</TableHead>
+                                    <TableHead>Harga</TableHead>
+                                    <TableHead>Satuan</TableHead>
+                                    <TableHead>Media</TableHead>
+                                    <TableHead></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -260,23 +274,10 @@ export default function ItemsPage() {
                                         </TableCell>
                                         <TableCell className="font-medium">{it.kodeItem}</TableCell>
                                         <TableCell>{it.namaItem}</TableCell>
-                                        <TableCell>
-                                            <div className="text-xs leading-tight">
-                                                <div><span className="text-muted-foreground">Kategori:</span> {it.kategori || "—"}</div>
-                                                <div><span className="text-muted-foreground">Jenis:</span> {it.jenisItem || "—"}</div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            {it.nilaiSatuan ? `${it.nilaiSatuan} ${it.satuan}` : it.satuan}
-                                        </TableCell>
-                                        <TableCell>
-                                            {it.nilaiKonversi
-                                                ? `1 item = ${it.nilaiKonversi} ${it.satuanKonversi || "-"}` : "—"}
-                                        </TableCell>
-                                        <TableCell title={it.deskripsiPenggunaan || ""}>
-                                            {it.nilaiPenggunaan
-                                                ? `1 item (${it.nilaiSatuan ?? 1} ${it.satuan}) → ${it.nilaiPenggunaan} ${it.satuanPenggunaan || "?"}` : "—"}
-                                        </TableCell>
+                                        <TableCell>{it.kategori}</TableCell>
+                                        <TableCell>{it.jenisItem}</TableCell>
+                                        <TableCell className="text-right">{fmt(it.harga)}</TableCell>
+                                        <TableCell>{it.satuan}</TableCell>
 
                                         {/* Media */}
                                         <TableCell>
@@ -294,17 +295,15 @@ export default function ItemsPage() {
                                                     </div>
                                                 )}
 
-                                                {it.linkWeb ? (
+                                                {it.linkWeb && (
                                                     <Button asChild size="sm" variant="ghost" className="px-2">
                                                         <a href={it.linkWeb} target="_blank" rel="noopener noreferrer" title="Buka halaman produk">
                               <span className="inline-flex items-center gap-1">
                                 <LinkIcon className="h-4 w-4" />
-                                <span className="text-xs">Buka link</span>
+                                <span className="text-xs"></span>
                               </span>
                                                         </a>
                                                     </Button>
-                                                ) : (
-                                                    <span className="text-xs text-muted-foreground">—</span>
                                                 )}
                                             </div>
                                         </TableCell>
@@ -412,7 +411,80 @@ function DeleteDialog({ id, onDeleted }) {
     )
 }
 
-/** ======== BULK DIALOG: kalkulator/penggunaan ======== **/
+/** ======== BULK DIALOG: HARGA (BARU) ======== **/
+function BulkHargaDialog({ disabled, ids, count, onDone }) {
+    const [open, setOpen] = useState(false)
+    const [busy, setBusy] = useState(false)
+    // simpan string agar NumericInput mudah dikontrol
+    const [harga, setHarga] = useState("")
+
+    async function submit(e) {
+        e?.preventDefault?.()
+        if (harga === "" || harga == null) {
+            alert("Harga wajib diisi")
+            return
+        }
+        const n = Number(harga)
+        if (!Number.isFinite(n) || n < 0) {
+            alert("Harga tidak valid")
+            return
+        }
+
+        setBusy(true)
+        try {
+            const res = await fetch("/api/items/bulk", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ids, harga: n }),
+            })
+            const j = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                alert(j.error || "Bulk edit harga gagal")
+                return
+            }
+            setOpen(false)
+            setHarga("")
+            onDone?.()
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={(v) => !disabled && setOpen(v)}>
+            <DialogTrigger asChild>
+                <Button variant="secondary" disabled={disabled} title="Edit harga untuk banyak item">
+                    <Tag className="h-4 w-4 mr-2" />
+                    Edit Harga{count ? ` • ${count}` : ""}
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader><DialogTitle>Edit Harga</DialogTitle></DialogHeader>
+                <form onSubmit={submit} className="space-y-4">
+                    <div className="rounded-md bg-muted/40 text-xs text-muted-foreground">
+                        Menerapkan <b>harga baru</b> ke <b>{count}</b> item terpilih.
+                    </div>
+                    <FieldMini label="Harga (Rp)">
+                        <NumericInput
+                            value={harga}
+                            onValue={(val) => setHarga(val)}
+                            decimalScale={0}
+                            fixedDecimalScale={false}
+                            allowNegative={false}
+                            className="w-full mt-2"
+                        />
+                    </FieldMini>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
+                        <Button type="submit" disabled={busy}>Terapkan</Button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
+/** ======== BULK DIALOG: kalkulator/penggunaan (SUDAH ADA) ======== **/
 function BulkCalcDialog({ disabled, ids, count, onDone }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)

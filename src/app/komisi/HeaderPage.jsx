@@ -17,7 +17,7 @@ export default function HeaderPage({
                                        setTargetKomisi,
                                    }) {
     return (
-        <Card className="mx-auto max-w-6xl py-4 sm:py-6 gap-4 sm:gap-6">
+        <Card className="mx-auto  py-4 sm:py-6 gap-4 sm:gap-6">
             <div className="px-4 sm:px-6 flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
                 <div className="flex-1 text-base sm:text-lg">Target Komisi</div>
                 <div className="text-xs text-muted-foreground sm:whitespace-nowrap">

@@ -46,7 +46,7 @@ export default function SimulasiPage() {
                 loading={loading}
                 ready={ready}
                 rows={rows}
-                clear={onClear} // 🔹 kirim ke HeaderPage
+                clear={onClear}
                 refresh={refresh}
                 targetKomisi={targetKomisi}
                 setTargetKomisi={setTargetKomisi}

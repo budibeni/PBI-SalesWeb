@@ -1,4 +1,3 @@
-// components/NumericInput.jsx
 "use client";
 import React from "react";
 import { NumericFormat } from "react-number-format";
@@ -9,8 +8,8 @@ export default function NumericInput({
                                          onValue,
                                          softMin,
                                          softMax,
-                                         decimalScale = 2,
-                                         fixedDecimalScale = true,
+                                         decimalScale = 6, // default lebih tinggi agar tidak hilang angka kecil
+                                         fixedDecimalScale = false,
                                          allowNegative = false,
                                          className,
                                          disabled,
@@ -20,21 +19,25 @@ export default function NumericInput({
                                      }) {
     const lastFloatRef = React.useRef(undefined);
 
-    const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+    // gunakan scale dinamis
+    const roundTo = (n, scale = decimalScale) => {
+        const factor = 10 ** scale;
+        return Math.round((Number(n) || 0) * factor) / factor;
+    };
 
     const clamp = (n) => {
         if (n == null || Number.isNaN(n)) return undefined;
         let x = n;
         if (typeof softMin === "number") x = Math.max(softMin, x);
         if (typeof softMax === "number") x = Math.min(softMax, x);
-        return round2(x);
+        return roundTo(x);
     };
 
-    const needsRound2 = (n) => {
+    const needsRound = (n) => {
         if (!Number.isFinite(n)) return false;
         const s = String(n);
         const i = s.indexOf(".");
-        return i !== -1 && s.length - i - 1 > 2;
+        return i !== -1 && s.length - i - 1 > decimalScale;
     };
 
     return (
@@ -50,7 +53,6 @@ export default function NumericInput({
             isAllowed={(vals) => {
                 if (!allowDecimal) {
                     const raw = String(vals?.value ?? "");
-                    // NumericFormat selalu pakai DOT untuk value numerik
                     if (raw.includes(".")) return false;
                 }
                 return true;
@@ -68,7 +70,7 @@ export default function NumericInput({
                 const inRange =
                     (typeof softMin !== "number" || n >= softMin) &&
                     (typeof softMax !== "number" || n <= softMax);
-                const mustRound = needsRound2(n);
+                const mustRound = needsRound(n);
                 if (!inRange || mustRound) {
                     const c = clamp(n);
                     onValue?.(String(c ?? n));

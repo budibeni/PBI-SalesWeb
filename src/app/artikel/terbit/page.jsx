@@ -201,7 +201,7 @@ export default function PublishedArticlesSearch() {
             {/* Brand bar + tombol Masuk (jika belum login) */}
             {me === null && (
                 <div className="bg-background">
-                    <div className="mx-auto max-w-3xl px-4 pt-6">
+                    <div className="mx-auto max-w-4xl px-4 pt-6">
                         <div className="flex items-center justify-between gap-3">
                             <div className="text-left">
                                 <div className="text-sm font-semibold leading-tight">Sales Go</div>
@@ -220,7 +220,7 @@ export default function PublishedArticlesSearch() {
 
             {/* Header: Input + tombol cari */}
             <header className="bg-background">
-                <div className="mx-auto max-w-3xl px-4 py-4">
+                <div className="mx-auto max-w-4xl px-4 py-4">
                     <div className="flex items-center gap-3">
                         <form onSubmit={(e) => {
                             e.preventDefault()
@@ -255,7 +255,7 @@ export default function PublishedArticlesSearch() {
             </header>
 
             {/* Body */}
-            <main className="mx-auto max-w-3xl px-4 pb-1">
+            <main className="mx-auto max-w-4xl px-4 pb-1">
                 {/* ====== STATUS BAR dengan tombol toggle di kanan ====== */}
                 <div className="mb-4 flex items-center justify-between">
                     <div className="text-xs text-muted-foreground">

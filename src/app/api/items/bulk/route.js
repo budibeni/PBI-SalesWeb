@@ -38,9 +38,9 @@ export async function PATCH(req) {
         };
 
         // === UMUM (opsional untuk bulk) ===
-        maybeSet("kategori", body.kategori, strOrNull);     // BLOCK/SLAB/BOND/SHIELD
-        maybeSet("jenisItem", body.jenisItem, strOrNull);   // pengganti 'merek'
-        maybeSet("harga", body.harga, intOrNull);           // Int?
+        maybeSet("kategori", body.kategori, strOrNull);
+        maybeSet("jenisItem", body.jenisItem, strOrNull);
+        maybeSet("harga", body.harga, intOrNull);
 
         // === KONVERSI / KALKULATOR ===
         maybeSet("satuan", body.satuan, (v) => {
@@ -60,7 +60,7 @@ export async function PATCH(req) {
         maybeSet("gambarUrl", body.gambarUrl, strOrNull);
         maybeSet("linkWeb", body.linkWeb, strOrNull);
 
-        // (DIHAPUS) persentaseKomisi -> sudah tidak ada di schema
+
 
         if (Object.keys(data).length === 0) {
             return NextResponse.json({ error: "Tidak ada field yang diubah" }, { status: 400 });

@@ -104,7 +104,7 @@ export default function SearchItem({
 
             {/* Filter kategori: sisa lebar di mobile, w-48 di desktop */}
             {/*<div className="flex-1 sm:flex-none sm:w-48">*/}
-            <div className="">
+            <div className="min-w-40">
                 <Select value={selectedCat} onValueChange={onChangeCategory}>
                     <SelectTrigger className="w-full">
                         <SelectValue placeholder="Filter kategori" />

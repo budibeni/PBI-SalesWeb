@@ -239,6 +239,7 @@ export default function TableProduk({
                                                 value={r.qty}
                                                 softMin={MIN_QTY}
                                                 allowDecimal={!isNotDecimal}
+                                                decimalScale={2}
                                                 fixedDecimalScale={true}
                                                 onValue={(val) => onChangeRow?.(r.id, { qty: val })}
                                                 disabled={r.qtyLocked}
@@ -365,6 +366,7 @@ export default function TableProduk({
                                                         value={r.qty}
                                                         softMin={MIN_QTY}
                                                         allowDecimal={!isNotDecimal}
+                                                        decimalScale={2}
                                                         fixedDecimalScale={true}
                                                         onValue={(strNumeric) => onChangeRow?.(r.id, { qty: strNumeric })}
                                                         disabled={r.qtyLocked}

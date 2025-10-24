@@ -13,7 +13,7 @@ export default async function BacaArtikel({ params }) {
 
     if (!row || !row.terbit) {
         return (
-            <main className="mx-auto max-w-3xl p-6">
+            <main className="mx-auto  p-6">
                 <BackBar />
                 <h1 className="text-xl font-semibold">Artikel tidak ditemukan</h1>
             </main>
@@ -21,7 +21,7 @@ export default async function BacaArtikel({ params }) {
     }
 
     return (
-        <main className="mx-auto max-w-3xl p-6">
+        <main className="mx-auto max-w-5xl p-6">
             <BackBar />
 
             <div className="flex items-start justify-between gap-3">
