@@ -48,7 +48,7 @@ function AccessEditor({ value, onChange }) {
             {Object.entries(sections).map(([section, items]) => {
                 const sectionOn = items.every(i => state[i.id])
                 return (
-                    <div key={section} className="space-y-2">
+                    <div key={section} className="space-y-1">
                         <div className="flex items-center justify-between">
                             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{section}</div>
                             <Button type="button" size="sm" variant="ghost" onClick={() => setSection(section, !sectionOn)}>
@@ -57,7 +57,7 @@ function AccessEditor({ value, onChange }) {
                         </div>
                         <div className="grid sm:grid-cols-2 gap-2">
                             {items.map(m => (
-                                <label key={m.id} className="flex items-center gap-2 rounded-md border p-2">
+                                <label key={m.id} className="flex items-center gap-2 rounded-md border px-2 py-1">
                                     <Checkbox checked={!!state[m.id]} onCheckedChange={(v) => setOne(m.id, v)} />
                                     <span>{m.label}</span>
                                 </label>
@@ -143,7 +143,7 @@ export default function UsersManager({ initialUsers }) {
                     <DialogTrigger asChild>
                         <Button><UserPlus className="h-4 w-4 mr-2" /> Pengguna Baru</Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
+                    <DialogContent className="max-w-6xl">
                         <DialogHeader><DialogTitle>Tambah Pengguna</DialogTitle></DialogHeader>
 
                         {error && (
@@ -153,7 +153,7 @@ export default function UsersManager({ initialUsers }) {
                         )}
 
                         <form className="grid gap-4" onSubmit={createUser}>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-2">
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="akun">Akun</Label>
                                     <Input id="akun" value={f.akun} onChange={e=>setF(s=>({...s, akun:e.target.value}))} required />
@@ -175,27 +175,33 @@ export default function UsersManager({ initialUsers }) {
                                     <Input id="bagian" value={f.bagian} onChange={e=>setF(s=>({...s, bagian:e.target.value}))} />
                                 </div>
                                 <div className="grid gap-1.5">
-                                    <Label>Role</Label>
-                                    <Select value={f.role} onValueChange={v=>setF(s=>({...s, role:v}))}>
-                                        <SelectTrigger><SelectValue placeholder="Pilih role" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="user">user</SelectItem>
-                                            <SelectItem value="admin">admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex justify-between items-center gap-1">
+                                        <div className="grid gap-1.5">
+                                            <Label>Role</Label>
+                                            <Select value={f.role} onValueChange={v=>setF(s=>({...s, role:v}))}>
+                                                <SelectTrigger><SelectValue placeholder="Pilih role" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="user">user</SelectItem>
+                                                    <SelectItem value="admin">admin</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="grid gap-1.5 sm:col-span-2">
+                                            <Label htmlFor="aktif">Status</Label>
+                                            <div className="flex items-center gap-3">
+                                                <Switch id="aktif" checked={f.aktif} onCheckedChange={(v)=>setF(s=>({...s, aktif:v}))} />
+                                                <span className="text-sm">{f.aktif ? "Aktif" : "Nonaktif"}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                 </div>
                                 <div className="grid gap-1.5 sm:col-span-2">
                                     <Label htmlFor="password">Password (min 8)</Label>
                                     <Input id="password" type="password" value={f.password} onChange={e=>setF(s=>({...s, password:e.target.value}))} required />
                                 </div>
                                 {/* Status aktif saat create */}
-                                <div className="grid gap-1.5 sm:col-span-2">
-                                    <Label htmlFor="aktif">Status</Label>
-                                    <div className="flex items-center gap-3">
-                                        <Switch id="aktif" checked={f.aktif} onCheckedChange={(v)=>setF(s=>({...s, aktif:v}))} />
-                                        <span className="text-sm">{f.aktif ? "Aktif" : "Nonaktif"}</span>
-                                    </div>
-                                </div>
+
                             </div>
 
                             <Separator />
@@ -232,7 +238,7 @@ export default function UsersManager({ initialUsers }) {
                                     <DialogTrigger asChild>
                                         <Button size="sm" variant="outline"><Settings2 className="h-4 w-4 mr-2" />Edit Akses</Button>
                                     </DialogTrigger>
-                                    <DialogContent className="max-w-2xl">
+                                    <DialogContent className="max-w-6xl">
                                         <DialogHeader><DialogTitle>Edit: {u.nama || u.akun}</DialogTitle></DialogHeader>
 
                                         {error && (
@@ -242,22 +248,27 @@ export default function UsersManager({ initialUsers }) {
                                         )}
 
                                         {/* Status aktif saat edit */}
-                                        <div className="mb-3">
-                                            <Label htmlFor="edit-aktif">Status</Label>
-                                            <div className="flex items-center gap-3 mt-1.5">
-                                                <Switch id="edit-aktif" checked={editAktif} onCheckedChange={setEditAktif} />
-                                                <span className="text-sm">{editAktif ? "Aktif" : "Nonaktif"}</span>
-                                            </div>
-                                        </div>
 
-                                        <Separator className="my-3" />
+
+                                        <Separator className="my-0.5" />
 
                                         <AccessEditor value={editAccess} onChange={setEditAccess} />
 
-                                        <div className="flex gap-2 justify-end pt-2">
-                                            <Button type="button" variant="ghost" onClick={()=>setOpenEdit(null)}>Batal</Button>
-                                            <Button onClick={saveAccess} disabled={updating}>{updating ? "Menyimpan..." : "Simpan"}</Button>
+                                        <div className="flex justify-between mt-4">
+                                            <div className="">
+                                                <Label htmlFor="edit-aktif">Status</Label>
+                                                <div className="flex items-center gap-3 mt-1.5">
+                                                    <Switch id="edit-aktif" checked={editAktif} onCheckedChange={setEditAktif} />
+                                                    <span className="text-sm">{editAktif ? "Aktif" : "Nonaktif"}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2 justify-end pt-2">
+                                                <Button type="button" variant="ghost" onClick={()=>setOpenEdit(null)}>Batal</Button>
+                                                <Button onClick={saveAccess} disabled={updating}>{updating ? "Menyimpan..." : "Simpan"}</Button>
+                                            </div>
                                         </div>
+
+
                                     </DialogContent>
                                 </Dialog>
                             </div>
