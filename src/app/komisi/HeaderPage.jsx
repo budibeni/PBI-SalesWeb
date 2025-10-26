@@ -1,10 +1,9 @@
-// komisi/HeaderPage.jsx
 "use client"
 
 import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { RefreshCcw, Save, Trash2 } from "lucide-react"
+import { List, RefreshCcw, Save, Trash2 } from "lucide-react"
 import TargetKomisi from "./TargetKomisi"
 
 export default function HeaderPage({
@@ -15,6 +14,10 @@ export default function HeaderPage({
                                        refresh,
                                        targetKomisi,
                                        setTargetKomisi,
+                                       onSave,
+                                       saving = false,
+                                       isUpdate,
+                                       onShowList
                                    }) {
     return (
         <Card className="mx-auto  py-4 sm:py-6 gap-4 sm:gap-6">
@@ -23,6 +26,16 @@ export default function HeaderPage({
                 <div className="text-xs text-muted-foreground sm:whitespace-nowrap">
                     {loading ? "Memuat…" : ready ? `Item : ${rows.length}` : "Siapkan data…"}
                 </div>
+
+                <Button
+                    variant="outline"
+                    onClick={onShowList}
+                    className="flex items-center gap-1"
+                    title="Lihat daftar simulasi tersimpan"
+                >
+                    <List className="h-4 w-4" />
+                    <span className="hidden sm:inline">List</span>
+                </Button>
 
                 <Button variant="outline" onClick={refresh} className="sm:w-auto flex items-center gap-1" title="Refresh data">
                     <RefreshCcw className="h-4 w-4 sm:mr-1" />
@@ -40,14 +53,17 @@ export default function HeaderPage({
                 </Button>
 
                 <Button
-                    onClick={() => console.log("TODO: simpan target komisi")}
-                    disabled={rows.length === 0}
-                    className="sm:w-auto flex items-center gap-1"
-                    title="Simpan"
+                    onClick={onSave}
+                    disabled={rows.length === 0 || saving}
+                    className="flex items-center gap-1"
+                    title={isUpdate ? "Update data ini" : "Simpan baru"}
                 >
-                    <Save className="h-4 w-4 sm:mr-1" />
-                    <span className="hidden sm:inline">Simpan</span>
+                    <Save className="h-4 w-4" />
+                    <span className="hidden sm:inline">{saving ? "Menyimpan..." : isUpdate ? "Simpan Perubahan" : "Simpan"}</span>
                 </Button>
+
+
+
             </div>
 
             <CardContent className="px-2">

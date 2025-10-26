@@ -11,12 +11,12 @@ const nf = (n) =>
  * FooterPage
  * - komisiDasar: number ATAU { total, perKategori }
  * - achvment: Record<string, number> // 0..1..n
+ * - onSummaryChange?: (summary) => void   ← NEW
  * - bonusUtama = Σ (0.10 × perKategori[k])
- * - bonusExtra = Σ ( (perKategori[k] * achvment[k] * 1.2) - (perKategori[k] + bonusUtamaK) )
- *                hanya jika achvment[k] >= 1
+ * - bonusExtra = Σ ( (perKategori[k] * achvment[k] * 1.2) - (perKategori[k] + bonusUtamaK) ) jika achvment[k] >= 1
  * - total = totalDasar + bonusUtama + bonusExtra
  */
-export default function FooterPage({ komisiDasar = 0, achvment = {} }) {
+export default function FooterPage({ komisiDasar = 0, achvment = {}, onSummaryChange }) {
     // Normalisasi komisi dasar
     const totalDasar =
         Number(
@@ -31,7 +31,7 @@ export default function FooterPage({ komisiDasar = 0, achvment = {} }) {
             komisiDasar.perKategori) ||
         {};
 
-    // 🔹 Hitung Bonus Utama (10%)
+    // 🔹 Bonus Utama (10%)
     const { bonusUtamaMap, bonusUtama } = React.useMemo(() => {
         const m = {};
         let sum = 0;
@@ -44,23 +44,48 @@ export default function FooterPage({ komisiDasar = 0, achvment = {} }) {
         return { bonusUtamaMap: m, bonusUtama: sum };
     }, [perKategori]);
 
-    // 🔹 Hitung Bonus Extra (hanya achvment >= 1)
-    const bonusExtra = React.useMemo(() => {
+    // 🔹 Bonus Extra (hanya achvment >= 1)
+    const { bonusExtraMap, bonusExtra } = React.useMemo(() => {
+        const map = {};
         let sum = 0;
         for (const [k, dasarVal] of Object.entries(perKategori)) {
             const dasar = Number(dasarVal) || 0;
             const ach = Number(achvment?.[k]);
             if (!Number.isFinite(ach) || ach < 1) continue;
             const bUtamaK = Number(bonusUtamaMap[k]) || 0;
-            const extraK = (dasar * ach * 1.2) - (dasar + bUtamaK);
+            const extraK = dasar * ach * 1.2 - (dasar + bUtamaK);
+            map[k] = extraK;
             sum += extraK;
         }
-        return sum;
+        return { bonusExtraMap: map, bonusExtra: sum };
     }, [perKategori, achvment, bonusUtamaMap]);
 
     const total = totalDasar + bonusUtama + bonusExtra;
 
+    // ⬇️ KIRIM ringkasan ke parent
+    React.useEffect(() => {
+        onSummaryChange?.({
+            komisiDasarTotal: totalDasar,
+            komisiDasarPerKategori: perKategori,
+            bonusUtamaTotal: bonusUtama,
+            bonusUtamaPerKategori: bonusUtamaMap,
+            bonusExtraTotal: bonusExtra,
+            bonusExtraPerKategori: bonusExtraMap,
+            subtotalTotal: total,
+        });
+    }, [
+        totalDasar,
+        perKategori,
+        bonusUtama,
+        bonusUtamaMap,
+        bonusExtra,
+        bonusExtraMap,
+        total,
+        onSummaryChange,
+    ]);
+
     return (
+        <div className="sticky bottom-0 left-0 right-0 z-40 py-2 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div
             className={cn(
                 "bg-background/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur-md",
@@ -70,31 +95,24 @@ export default function FooterPage({ komisiDasar = 0, achvment = {} }) {
             aria-label="Ringkasan Komisi"
         >
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                {/* Komisi Dasar */}
                 <StatCard
                     icon={<Wallet className="h-4 w-4" />}
                     label="Komisi Dasar"
                     value={`Rp. ${nf(totalDasar)}`}
                     tone="gray"
                 />
-
-                {/* Bonus Utama (10%) */}
                 <StatCard
                     icon={<Gift className="h-4 w-4" />}
                     label="Bonus Utama"
                     value={`+Rp. ${nf(bonusUtama)}`}
                     tone="green"
                 />
-
-                {/* Bonus Extra */}
                 <StatCard
                     icon={<GiftIcon className="h-4 w-4" />}
                     label="Bonus Extra"
                     value={`${bonusExtra >= 0 ? "+" : ""}Rp. ${nf(bonusExtra)}`}
                     tone="green"
                 />
-
-                {/* Total Komisi */}
                 <StatCard
                     icon={<Sigma className="h-4 w-4" />}
                     label="Total Komisi"
@@ -104,12 +122,10 @@ export default function FooterPage({ komisiDasar = 0, achvment = {} }) {
                 />
             </div>
         </div>
+        </div>
     );
 }
 
-/**
- * Komponen kecil untuk tiap metrik
- */
 function StatCard({ icon, label, value, tone = "gray", emphasize = false }) {
     const tones = {
         gray: {

@@ -74,21 +74,23 @@ model TbMasterKomisi {
   diubahTanggal    DateTime @updatedAt
 }
 
-model TbSkenarioKomisi {
-  id            String   @id @default(cuid())
-  nama          String
-  targetTotal   Int?
-  targetBlock   Int?
-  targetSlab    Int?
-  targetBond    Int?
-  targetShield  Int?
-  komisiDasar   Int?
-  bonus1        Int?
-  bonus2        Int?
-  subtotal      Int?
-  items         Json?
-  dibuatOleh    String?
-  dibuatTanggal DateTime @default(now())
-  diubahOleh    String?
-  diubahTanggal DateTime @updatedAt
+model TbSimulasiKomisi {
+  id                  String   @id @default(cuid())
+  judul               String   @default("Simulasi Komisi")
+  catatan             String?
+  targetGlobal        Float? // Target global nominal (Rp)
+  targetKategori      Json // { "Bond": "40%", "Shield": "30%" }
+  achievementKategori Json // { "Bond": 1.2, "Shield": 0.9 }
+  komisiDasarTotal    Float
+  komisiDasarKategori Json // { "Bond": 2_000_000, "Shield": 1_000_000 }
+  bonusUtamaTotal     Float
+  bonusUtamaKategori  Json // { "Bond": 200_000, "Shield": 100_000 }
+  bonusExtraTotal     Float
+  bonusExtraKategori  Json // { "Bond": 40_000, "Shield": 0 }
+  subtotalTotal       Float // Total keseluruhan = dasar + bonus utama + bonus ekstra
+  rowsItem            Json // [{ id, kodeItem, kategori, harga, qty, persen, subtotal, ... }]
+  dibuatOleh          String?
+  dibuatTanggal       DateTime @default(now())
+  diubahOleh          String?
+  diubahTanggal       DateTime @updatedAt
 }

@@ -1,4 +1,3 @@
-// komisi/AchTarget.jsx
 "use client"
 
 import React from "react"
@@ -6,7 +5,7 @@ import { useKategori } from "@/providers/KategoriProvider"
 import NumericInput from "@/components/ui/NumericInput"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 
-export default function AchTarget({ show, onComputed }) {
+export default function AchTarget({ show, onComputed, value = {} }) {
     const { items: kategoriItems, ready: katReady } = useKategori()
 
     const kategoriList = React.useMemo(
@@ -17,14 +16,23 @@ export default function AchTarget({ show, onComputed }) {
         [kategoriItems]
     )
 
-    // local state untuk simpan nilai input per kategori (string dot-decimal)
     const [values, setValues] = React.useState({})
 
+    // 🟢 Sinkronisasi dari parent
+    React.useEffect(() => {
+        if (!value || typeof value !== "object") return
+        const next = {}
+        for (const [kat, val] of Object.entries(value)) {
+            // value dari DB sudah dalam bentuk skala 1.0 (bukan persen)
+            const num = Number(val)
+            next[kat] = Number.isFinite(num) ? String((num * 100).toFixed(2)) : ""
+        }
+        setValues(next)
+    }, [value])
+
     const handleChange = (kat, strNumeric) => {
-        // strNumeric sudah dot-decimal dari NumericInput (contoh: "12.5" atau "")
         setValues((prev) => {
             const next = { ...prev, [kat]: strNumeric }
-            // kirim ke parent dengan nilai dibagi 100
             const scaled = {}
             for (const [k, v] of Object.entries(next)) {
                 const num = Number(v)
@@ -60,8 +68,8 @@ export default function AchTarget({ show, onComputed }) {
                                         className="pr-10"
                                     />
                                     <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    %
-                  </span>
+                                        %
+                                    </span>
                                 </div>
                             </div>
                         )
