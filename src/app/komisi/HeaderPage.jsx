@@ -1,9 +1,7 @@
-"use client"
-
 import React from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { List, RefreshCcw, Save, Trash2 } from "lucide-react"
+import { BookmarkCheck, List, RefreshCcw, Save, Trash2 } from "lucide-react"
 import TargetKomisi from "./TargetKomisi"
 
 export default function HeaderPage({
@@ -17,16 +15,34 @@ export default function HeaderPage({
                                        onSave,
                                        saving = false,
                                        isUpdate,
-                                       onShowList
+                                       judul = "",
+                                       onShowList,
                                    }) {
     return (
-        <Card className="mx-auto  py-4 sm:py-6 gap-4 sm:gap-6">
+        <Card className="mx-auto py-4 sm:py-6 gap-4 sm:gap-6">
             <div className="px-4 sm:px-6 flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-                <div className="flex-1 text-base sm:text-lg">Target Komisi</div>
-                <div className="text-xs text-muted-foreground sm:whitespace-nowrap">
-                    {loading ? "Memuat…" : ready ? `Item : ${rows.length}` : "Siapkan data…"}
+                <div className="flex-1 text-base sm:text-lg font-medium">
+                    <div className="flex items-center gap-1 sm:whitespace-nowrap">
+                        {loading ? (
+                            "Memuat…"
+                        ) : ready ? (
+                            isUpdate ? (
+                                <>
+                                    <BookmarkCheck className="h-5 w-5 text-green-600" />
+                                    <span>{judul?.trim() || "(Tanpa Judul)"}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>✨ Buat Baru</span>
+                                </>
+                            )
+                        ) : (
+                            "Siapkan data…"
+                        )}
+                    </div>
                 </div>
 
+                {/* Tombol List */}
                 <Button
                     variant="outline"
                     onClick={onShowList}
@@ -37,11 +53,18 @@ export default function HeaderPage({
                     <span className="hidden sm:inline">List</span>
                 </Button>
 
-                <Button variant="outline" onClick={refresh} className="sm:w-auto flex items-center gap-1" title="Refresh data">
+                {/* Tombol Refresh */}
+                <Button
+                    variant="outline"
+                    onClick={refresh}
+                    className="sm:w-auto flex items-center gap-1"
+                    title="Refresh data"
+                >
                     <RefreshCcw className="h-4 w-4 sm:mr-1" />
                     <span className="hidden sm:inline">Refresh</span>
                 </Button>
 
+                {/* Tombol Bersihkan */}
                 <Button
                     variant="outline"
                     onClick={clear}
@@ -52,6 +75,7 @@ export default function HeaderPage({
                     <span className="hidden sm:inline">Bersihkan</span>
                 </Button>
 
+                {/* Tombol Simpan / Update */}
                 <Button
                     onClick={onSave}
                     disabled={rows.length === 0 || saving}
@@ -59,11 +83,14 @@ export default function HeaderPage({
                     title={isUpdate ? "Update data ini" : "Simpan baru"}
                 >
                     <Save className="h-4 w-4" />
-                    <span className="hidden sm:inline">{saving ? "Menyimpan..." : isUpdate ? "Simpan Perubahan" : "Simpan"}</span>
+                    <span className="hidden sm:inline">
+            {saving
+                ? "Menyimpan..."
+                : isUpdate
+                    ? "Simpan Perubahan"
+                    : "Simpan"}
+          </span>
                 </Button>
-
-
-
             </div>
 
             <CardContent className="px-2">

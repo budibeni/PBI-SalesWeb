@@ -67,12 +67,14 @@ export default function SearchItem({
         const persen = persenByKategori.get(key) ?? 0
         const rowBaru = {
             id: it.id,
+            kodeItem: it.kodeItem,
+            namaItem: it.namaItem,
             kategori: it.kategori,
             satuan: it.satuan,
-            msrp: Number(it.harga ?? 0), // harga dari DB (label)
-            harga: Number(it.harga ?? 0),                    // input nominal default 0
-            qty: 0,                      // input nominal default 0
-            persen,                      // komisi desimal (0.1 = 10%)
+            msrp: Number(it.harga ?? 0),
+            harga: Number(it.harga ?? 0),
+            qty: 0,
+            persen,
         }
         onPick?.(rowBaru)
     }
