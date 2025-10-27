@@ -26,6 +26,7 @@ export default function EditGeneralPage() {
                 kodeItem: j.kodeItem || "",
                 namaItem: j.namaItem || "",
                 deskripsi: j.deskripsi || "",
+                hpp: j.hpp ?? "",
                 harga: j.harga ?? "",
                 satuan: j.satuan || "",
                 kategori: j.kategori || "",
@@ -87,17 +88,19 @@ export default function EditGeneralPage() {
                                 <Field label="Nama Item" required>
                                     <Input value={f.namaItem} onChange={(e)=>set("namaItem", e.target.value)} required />
                                 </Field>
+                                <Field label="Deskripsi">
+                                    <Input value={f.deskripsi} onChange={(e)=>set("deskripsi", e.target.value)} />
+                                </Field>
                                 <Field label="Satuan" required>
                                     <Input value={f.satuan} onChange={(e)=>set("satuan", e.target.value)} required />
+                                </Field>
+                                <Field label="HPP">
+                                    <Input type="number" value={f.hpp} onChange={(e)=>set("hpp", e.target.value)} />
                                 </Field>
                                 <Field label="Harga">
                                     <Input type="number" value={f.harga} onChange={(e)=>set("harga", e.target.value)} />
                                 </Field>
                             </div>
-
-                            <Field label="Deskripsi">
-                                <Input value={f.deskripsi} onChange={(e)=>set("deskripsi", e.target.value)} />
-                            </Field>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field label="Kategori">

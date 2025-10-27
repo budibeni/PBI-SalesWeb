@@ -20,6 +20,7 @@ const DEFAULT_SELECT = {
     deskripsi: true,
     kategori: true,
     jenisItem: true,
+    hpp: true,
     harga: true,
     satuan: true,
     nilaiSatuan: true,

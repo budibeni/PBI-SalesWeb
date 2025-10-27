@@ -57,6 +57,7 @@ export async function PATCH(req, { params }) {
             data.kategori = v
         }
         if (body.jenisItem !== undefined) data.jenisItem = strOrNull(body.jenisItem)
+        if (body.hpp !== undefined) data.hpp = intOrNull(body.hpp)
         if (body.harga !== undefined) data.harga = intOrNull(body.harga)
 
         // — kalkulator/konversi —

@@ -85,6 +85,7 @@ export default function ItemsProvider({ children }) {
                 "deskripsi",
                 "kategori",
                 "jenisItem",
+                "hpp",
                 "harga",
                 "satuan",
                 "nilaiSatuan",

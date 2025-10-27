@@ -77,7 +77,7 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
                         <tbody>
                         {data.targetGlobal > 0 && (
                             <tr className="border-b">
-                                <td className="px-2 py-1 font-medium">Global</td>
+                                <td className="px-2 py-1 font-medium">Total Target</td>
                                 <td className="px-2 py-1 text-right">
                                     {data.targetGlobal ? `Rp ${nf(data.targetGlobal)}` : "-"}
                                 </td>

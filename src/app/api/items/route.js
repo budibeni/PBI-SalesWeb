@@ -80,8 +80,9 @@ export async function POST(req) {
             kodeItem: String(body.kodeItem || "").trim(),
             namaItem: String(body.namaItem || "").trim(),
             deskripsi: strOrNull(body.deskripsi),
-            kategori: strOrNull(body.kategori),   // (opsional) validasi: if (data.kategori && !ALLOWED_KATEGORI.has(data.kategori)) ...
+            kategori: strOrNull(body.kategori),
             jenisItem: strOrNull(body.jenisItem),
+            hpp: intOrNull(body.hpp),
             harga: intOrNull(body.harga),
 
             // konversi/kalkulator

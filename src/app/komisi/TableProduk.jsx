@@ -19,6 +19,7 @@ import {
 
 import NumericInput from "@/components/ui/NumericInput"
 import SearchItem from "@/app/komisi/SearchItem"
+import {Separator} from "@/components/ui/separator";
 
 const CAT_ALL = "__ALL__"
 const toNumericString = (n) => String(ROUND2(n))
@@ -172,6 +173,7 @@ export default function TableProduk({
                 ) : (
                     visibleRows.map((r) => {
                         const it = itemById(r.id) || {}
+                        const hpp = Number(it?.hpp ?? r.hpp ?? 0)
                         const msrp = Number(it?.msrp ?? r.msrp ?? 0)
                         const hasMsrp = Number.isFinite(msrp) && msrp > 0
 
@@ -192,10 +194,17 @@ export default function TableProduk({
                                         </div>
                                         {it.kategori && (
                                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                        {it.kategori}
-                      </span>
+                                            {it.kategori}
+                                          </span>
                                         )}
                                     </div>
+
+                                    <div className="flex items-start justify-between text-xs text-muted-foreground">
+                                        <div className="font-medium">MSRP : Rp. {fmt(msrp) || "-"}</div>
+                                        <div className="text-xs text-muted-foreground">{fmt(hpp) || ""}</div>
+                                    </div>
+
+                                    <Separator/>
 
                                     <div className="grid grid-cols-12 items-center gap-2">
                                         <label className="col-span-4 text-sm text-muted-foreground">Harga</label>
@@ -286,6 +295,7 @@ export default function TableProduk({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-72">Produk</TableHead>
+                                    <TableHead className="w-28 text-right">HPP</TableHead>
                                     <TableHead className="w-28 text-right">MSRP</TableHead>
                                     <TableHead className="w-36 text-right">Harga</TableHead>
                                     <TableHead className="w-28 text-right">Qty</TableHead>
@@ -297,6 +307,7 @@ export default function TableProduk({
                             <TableBody>
                                 {visibleRows.map((r) => {
                                     const it = itemById(r.id) || {}
+                                    const hpp = Number(it?.hpp ?? r.hpp ?? 0)
                                     const msrp = Number(it?.msrp ?? r.msrp ?? 0)
                                     const hasMsrp = Number.isFinite(msrp) && msrp > 0
 
@@ -314,13 +325,17 @@ export default function TableProduk({
                                                     <div className="font-medium leading-tight">{it.kodeItem || "-"}</div>
                                                     {String(activeFilter).toLowerCase() === CAT_ALL.toLowerCase() && it.kategori && (
                                                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                              {it.kategori}
-                            </span>
+                                                      {it.kategori}
+                                                    </span>
                                                     )}
                                                 </div>
                                                 <div className="text-xs text-muted-foreground leading-tight mt-1">
                                                     {it.namaItem || ""}
                                                 </div>
+                                            </TableCell>
+
+                                            <TableCell className="text-right text-muted-foreground">
+                                                Rp {fmt(hpp)}
                                             </TableCell>
 
                                             <TableCell className="text-right text-muted-foreground">

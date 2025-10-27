@@ -23,6 +23,7 @@ export default function NewItemPage() {
         deskripsi: "",
         kategori: "",    // BLOCK / SLAB / BOND / SHIELD (opsional)
         jenisItem: "",   // pengganti 'merek'
+        hpp: "",
         harga: "",
         // Kalkulator/Konversi
         satuan: "",
@@ -91,9 +92,14 @@ export default function NewItemPage() {
                                 <Field label="Jenis Item">
                                     <Input value={f.jenisItem} onChange={(e)=>set("jenisItem", e.target.value)} placeholder="cth: BLOCK STANDARD" />
                                 </Field>
-
-                                <Field label="Deskripsi">
-                                    <Input value={f.deskripsi} onChange={(e)=>set("deskripsi", e.target.value)} placeholder="cth: Bata ringan berkualitas" />
+                                <Field label="HPP (Rp.)">
+                                    <NumericInput
+                                        value={f.hpp}
+                                        onValue={(val) => set("hpp", val)}
+                                        decimalScale={0}
+                                        fixedDecimalScale={false}
+                                        allowNegative={false}
+                                    />
                                 </Field>
                                 <Field label="Harga (Rp.)">
                                     <NumericInput
@@ -103,6 +109,9 @@ export default function NewItemPage() {
                                         fixedDecimalScale={false}
                                         allowNegative={false}
                                     />
+                                </Field>
+                                <Field label="Deskripsi">
+                                    <Input value={f.deskripsi} onChange={(e)=>set("deskripsi", e.target.value)} placeholder="cth: Bata ringan berkualitas" />
                                 </Field>
                             </div>
                         </section>

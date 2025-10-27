@@ -71,6 +71,7 @@ export default function SearchItem({
             namaItem: it.namaItem,
             kategori: it.kategori,
             satuan: it.satuan,
+            hpp: Number(it.hpp ?? 0),
             msrp: Number(it.harga ?? 0),
             harga: Number(it.harga ?? 0),
             qty: 0,

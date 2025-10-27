@@ -24,20 +24,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import {
-    Plus,
-    Search as SearchIcon,
-    Trash2,
-    MoreHorizontal,
-    Pencil,
-    Calculator,
-    Image as ImageIcon,
-    Link as LinkIcon,
-    Tag,
+    Plus, Search as SearchIcon, Trash2, MoreHorizontal, Pencil,
+    Calculator, Image as ImageIcon, Link as LinkIcon, Tag
 } from "lucide-react"
 
-// formatter harga yg sudah ada di kode kamu
 import { fmt } from "@/app/komisi/utils"
-
 import NumericInput from "@/components/ui/NumericInput"
 
 const CAT_ALL = "__ALL__"
@@ -123,7 +114,7 @@ export default function ItemsPage() {
                 page: Number(json?.page ?? 1),
                 totalPages: Number(json?.totalPages ?? 1),
             })
-            // bersihkan selection yang sudah tidak ada di halaman ini
+            // bersihkan selection yg tidak ada di halaman aktif
             setSelected((prev) => new Set(
                 [...prev].filter((id) => Array.isArray(json?.items) && json.items.some((x) => x.id === id))
             ))
@@ -164,14 +155,14 @@ export default function ItemsPage() {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0">
                     <CardTitle className="text-xl">Master Item</CardTitle>
                     <div className="flex items-center gap-2">
-                        {/* ➕ Edit Harga sekaligus */}
+                        {/* ➕ Bulk Edit Harga/HPP */}
                         <BulkHargaDialog
                             disabled={selected.size === 0}
                             count={selected.size}
                             ids={[...selected]}
                             onDone={async () => { await load() }}
                         />
-                        {/* Edit Kalkulator (sudah ada) */}
+                        {/* Bulk Edit Kalkulator (sudah ada) */}
                         <BulkCalcDialog
                             disabled={selected.size === 0}
                             count={selected.size}
@@ -256,7 +247,8 @@ export default function ItemsPage() {
                                     <TableHead>Nama</TableHead>
                                     <TableHead>Kategori</TableHead>
                                     <TableHead>Jenis</TableHead>
-                                    <TableHead>Harga</TableHead>
+                                    <TableHead className="text-right">HPP</TableHead>
+                                    <TableHead className="text-right">Harga</TableHead>
                                     <TableHead>Satuan</TableHead>
                                     <TableHead>Media</TableHead>
                                     <TableHead></TableHead>
@@ -276,6 +268,7 @@ export default function ItemsPage() {
                                         <TableCell>{it.namaItem}</TableCell>
                                         <TableCell>{it.kategori}</TableCell>
                                         <TableCell>{it.jenisItem}</TableCell>
+                                        <TableCell className="text-right">{fmt(it.hpp)}</TableCell>
                                         <TableCell className="text-right">{fmt(it.harga)}</TableCell>
                                         <TableCell>{it.satuan}</TableCell>
 
@@ -327,7 +320,6 @@ export default function ItemsPage() {
                                                                 <Calculator className="h-4 w-4" /> Edit Kalkulator
                                                             </Link>
                                                         </DropdownMenuItem>
-                                                        {/* Tambahan: halaman khusus media */}
                                                         <DropdownMenuItem asChild>
                                                             <Link href={`/items/${it.id}/media`} className="flex items-center gap-2">
                                                                 <ImageIcon className="h-4 w-4" /> Edit Media
@@ -342,7 +334,7 @@ export default function ItemsPage() {
                                 ))}
                                 {items.length === 0 && !loading && (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
+                                        <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
                                             Tidak ada data
                                         </TableCell>
                                     </TableRow>
@@ -411,22 +403,32 @@ function DeleteDialog({ id, onDeleted }) {
     )
 }
 
-/** ======== BULK DIALOG: HARGA (BARU) ======== **/
+/** ======== BULK DIALOG: HARGA/HPP (UPDATE YANG ADA NILAI SAJA) ======== **/
 function BulkHargaDialog({ disabled, ids, count, onDone }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
-    // simpan string agar NumericInput mudah dikontrol
     const [harga, setHarga] = useState("")
+    const [hpp, setHpp] = useState("")
 
     async function submit(e) {
         e?.preventDefault?.()
-        if (harga === "" || harga == null) {
-            alert("Harga wajib diisi")
+
+        // tidak ada nilai apapun
+        if ((harga === "" || harga == null) && (hpp === "" || hpp == null)) {
+            alert("Masukkan minimal salah satu nilai harga atau HPP.")
             return
         }
-        const n = Number(harga)
-        if (!Number.isFinite(n) || n < 0) {
-            alert("Harga tidak valid")
+
+        const payload = { ids }
+        const nHarga = Number(harga)
+        const nHpp = Number(hpp)
+
+        if (harga !== "" && Number.isFinite(nHarga) && nHarga >= 0) payload.harga = nHarga
+        if (hpp !== "" && Number.isFinite(nHpp) && nHpp >= 0) payload.hpp = nHpp
+
+        // jika tidak ada yang valid, stop
+        if (!("harga" in payload) && !("hpp" in payload)) {
+            alert("Tidak ada nilai valid untuk diupdate.")
             return
         }
 
@@ -435,15 +437,16 @@ function BulkHargaDialog({ disabled, ids, count, onDone }) {
             const res = await fetch("/api/items/bulk", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ids, harga: n }),
+                body: JSON.stringify(payload),
             })
             const j = await res.json().catch(() => ({}))
             if (!res.ok) {
-                alert(j.error || "Bulk edit harga gagal")
+                alert(j.error || "Bulk update gagal")
                 return
             }
             setOpen(false)
             setHarga("")
+            setHpp("")
             onDone?.()
         } finally {
             setBusy(false)
@@ -453,36 +456,67 @@ function BulkHargaDialog({ disabled, ids, count, onDone }) {
     return (
         <Dialog open={open} onOpenChange={(v) => !disabled && setOpen(v)}>
             <DialogTrigger asChild>
-                <Button variant="secondary" disabled={disabled} title="Edit harga untuk banyak item">
+                <Button variant="secondary" disabled={disabled} title="Edit harga dan/atau HPP untuk banyak item">
                     <Tag className="h-4 w-4 mr-2" />
-                    Edit Harga{count ? ` • ${count}` : ""}
+                    Edit Harga/HPP{count ? ` • ${count}` : ""}
                 </Button>
             </DialogTrigger>
             <DialogContent>
-                <DialogHeader><DialogTitle>Edit Harga</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Bulk Edit Harga / HPP</DialogTitle></DialogHeader>
+
                 <form onSubmit={submit} className="space-y-4">
-                    <div className="rounded-md bg-muted/40 text-xs text-muted-foreground">
-                        Menerapkan <b>harga baru</b> ke <b>{count}</b> item terpilih.
+                    <div className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+                        Isi nilai baru pada kolom di bawah. Hanya field yang berisi nilai yang akan di-update.
                     </div>
-                    <FieldMini label="Harga (Rp)">
-                        <NumericInput
-                            value={harga}
-                            onValue={(val) => setHarga(val)}
-                            decimalScale={0}
-                            fixedDecimalScale={false}
-                            allowNegative={false}
-                            className="w-full mt-2"
-                        />
-                    </FieldMini>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
-                        <Button type="submit" disabled={busy}>Terapkan</Button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <FieldMini label="HPP (Rp)">
+                            <NumericInput
+                                value={hpp}
+                                onValue={(val) => setHpp(val)}
+                                decimalScale={0}
+                                fixedDecimalScale={false}
+                                allowNegative={false}
+                                placeholder="Masukkan HPP baru"
+                                className="w-full"
+                            />
+                        </FieldMini>
+                        <FieldMini label="Harga (Rp)">
+                            <NumericInput
+                                value={harga}
+                                onValue={(val) => setHarga(val)}
+                                decimalScale={0}
+                                fixedDecimalScale={false}
+                                allowNegative={false}
+                                placeholder="Masukkan harga baru"
+                                className="w-full"
+                            />
+                        </FieldMini>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>
+                            Batal
+                        </Button>
+                        <Button type="submit" disabled={busy}>
+                            Terapkan
+                        </Button>
                     </div>
                 </form>
             </DialogContent>
         </Dialog>
     )
 }
+
+function FieldMini({ label, children }) {
+    return (
+        <div className="space-y-1">
+            <label className="text-sm">{label}</label>
+            {children}
+        </div>
+    )
+}
+
 
 /** ======== BULK DIALOG: kalkulator/penggunaan (SUDAH ADA) ======== **/
 function BulkCalcDialog({ disabled, ids, count, onDone }) {
@@ -564,11 +598,3 @@ function BulkCalcDialog({ disabled, ids, count, onDone }) {
     )
 }
 
-function FieldMini({ label, children }) {
-    return (
-        <div className="space-y-1">
-            <label className="text-sm">{label}</label>
-            {children}
-        </div>
-    )
-}

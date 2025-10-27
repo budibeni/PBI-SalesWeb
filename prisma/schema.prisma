@@ -44,6 +44,7 @@ model TbMasterItem {
   deskripsi           String?
   kategori            String? //BLOCK, SLAB, BOND , SHIELD
   jenisItem           String?
+  hpp                 Int?
   harga               Int?
   satuan              String // m3
   nilaiSatuan         Float? // contoh: 0.75
