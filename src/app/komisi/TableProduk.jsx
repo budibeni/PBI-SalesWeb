@@ -36,7 +36,6 @@ export default function TableProduk({
                                         onExpandChange = () => {},
                                         targetKomisi = null,
                                         onKomisiDasarChange,
-                                        // 🔹 tambahkan prop ini; kirim true jika user admin
                                         isAdmin = false,
                                     }) {
     const activeFilter = (selectedCat ?? CAT_ALL)

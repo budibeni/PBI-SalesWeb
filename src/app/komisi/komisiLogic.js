@@ -68,15 +68,13 @@ export function parseTargetKomisiObj(targetKomisi) {
     return { mode: "NONE", global: null, perCat: new Map() };
 }
 
-// ===== Algoritma rekomendasi per-scope =====
-// rows: array baris dengan { id, harga, qty, msrp, persen, hargaLocked, qtyLocked }
-// targetRp: number
-// return: patch map { [id]: { harga?: number, qty?: number } }
+
+// Equal-share: bagi target scope sama rata ke baris yang bisa diubah
 export function recommendScope(rows, targetRp) {
     const target = ROUND2(asNum(targetRp));
     if (!Array.isArray(rows) || rows.length === 0) return {};
 
-    // Normalisasi awal pada salinan
+    // Clone + normalisasi awal untuk field UNLOCK
     const clone = rows.map((r) => {
         const rr = { ...r };
         if (!rr.hargaLocked) rr.harga = clampPrice(rr.harga ?? rr.msrp, rr.msrp);
@@ -84,12 +82,18 @@ export function recommendScope(rows, targetRp) {
         return rr;
     });
 
-    let fixed = 0;
-    for (const r of clone) if (r.hargaLocked && r.qtyLocked) fixed += subOf(r);
-    fixed = ROUND2(fixed);
-    if (fixed > target + 1e-6) return {}; // tak mungkin dipenuhi
+    // Fixed (harga&qty locked) tak boleh melebihi target
+    const isFixed = (r) => r.hargaLocked && r.qtyLocked;
+    const fixedTotal = ROUND2(clone.filter(isFixed).reduce((s, r) => s + subOf(r), 0));
+    if (fixedTotal > target + 1e-6) return {};
 
-    let remaining = ROUND2(Math.max(0, target - fixed));
+    // Baris yang bisa diubah
+    const adj = clone.filter((r) => !isFixed(r));
+    if (adj.length === 0) return {};
+
+    const targetForAdj = ROUND2(Math.max(0, target - fixedTotal));
+    const perRowTarget = ROUND2(targetForAdj / adj.length);
+
     const patch = {};
     const setHarga = (r, v) => {
         const x = clampPrice(v, r.msrp);
@@ -102,98 +106,45 @@ export function recommendScope(rows, targetRp) {
         r.qty = x;
     };
 
-    // 1) qty lock, harga unlock → rata-kan harga proporsional sisa
-    const lockQtyOnly = clone.filter((r) => r.qtyLocked && !r.hargaLocked && asNum(r.qty) > 0);
-    if (remaining > 0 && lockQtyOnly.length > 0) {
-        const sumQP = lockQtyOnly.reduce((a, r) => a + asNum(r.qty) * normPct(r.persen), 0);
-        if (sumQP > 0) {
-            const unit = ROUND2(remaining / sumQP);
-            for (const r of lockQtyOnly) setHarga(r, unit);
-            const used = lockQtyOnly.reduce((a, r) => a + subOf(r), 0);
-            remaining = ROUND2(Math.max(0, remaining - used));
+    // Hitung nilai yang menghasilkan subtotal = perRowTarget
+    const applyTarget = (r, t) => {
+        const hpp = asNum(r.hpp);
+        const w = normPct(r.persen);
+        const harga = asNum(r.harga);
+        const qty = asNum(r.qty);
+
+        if (r.qtyLocked && !r.hargaLocked) {
+            // Cari harga: (harga - hpp) * qty * w = t  => harga = hpp + t / (qty*w)
+            const q = Math.max(qty, MIN_QTY);
+            const needHarga = hpp + (w > 0 ? t / (q * w) : 0);
+            setHarga(r, needHarga);
+        } else {
+            // Ubah qty (hargaLocked atau keduanya unlock)
+            // (harga - hpp) * qty * w = t  => qty = t / ((harga - hpp)*w)
+            const effMargin = Math.max(0, harga - hpp);
+            const needQty = (w > 0 && effMargin > 0) ? (t / (effMargin * w)) : MIN_QTY;
+            setQty(r, needQty);
         }
+    };
+
+    // 1) Set “equal target” untuk setiap baris adj
+    adj.forEach((r) => applyTarget(r, perRowTarget));
+
+    // 2) Koreksi residual beberapa iterasi (karena clamp/min/rounding)
+    const MAX_ITER = 6, TOL = 0.5; // 0.5 rupiah toleransi
+    for (let k = 0; k < MAX_ITER; k++) {
+        const nowAdj = clone.filter((r) => !isFixed(r));
+        const totals = nowAdj.map((r) => subOf(r));
+        const totalNow = ROUND2(fixedTotal + totals.reduce((a, b) => a + b, 0));
+        const resid = ROUND2(target - totalNow);
+        if (Math.abs(resid) <= TOL) break;
+
+        // Redistribusi residual sama-rata ke baris yang masih bisa bergerak
+        const deltaPerRow = ROUND2(resid / nowAdj.length);
+        nowAdj.forEach((r, i) => applyTarget(r, ROUND2(totals[i] + deltaPerRow)));
     }
 
-    // 2) harga lock, qty unlock → tambah qty proporsional
-    const lockPriceOnly = clone.filter((r) => r.hargaLocked && !r.qtyLocked);
-    if (remaining > 0 && lockPriceOnly.length > 0) {
-        const denom = lockPriceOnly.reduce((a, r) => a + asNum(r.harga) * normPct(r.persen), 0);
-        if (denom > 0) {
-            for (const r of lockPriceOnly) {
-                const share = (asNum(r.harga) * normPct(r.persen)) / denom;
-                const addValue = ROUND2(remaining * share);
-                const base = asNum(r.harga) * normPct(r.persen);
-                const addQty = base > 0 ? ROUND2(addValue / base) : 0;
-                setQty(r, asNum(r.qty) + addQty);
-            }
-            remaining = 0;
-        }
-    }
-
-    // 3) unlock keduanya → tambah qty (harga sudah di-clamp)
-    const unlockBoth = clone.filter((r) => !r.hargaLocked && !r.qtyLocked);
-    if (remaining > 0 && unlockBoth.length > 0) {
-        const denom = unlockBoth.reduce((a, r) => a + asNum(r.harga) * normPct(r.persen), 0);
-        if (denom > 0) {
-            for (const r of unlockBoth) {
-                const share = (asNum(r.harga) * normPct(r.persen)) / denom;
-                const addValue = ROUND2(remaining * share);
-                const base = asNum(r.harga) * normPct(r.persen);
-                const addQty = base > 0 ? ROUND2(addValue / base) : 0;
-                setQty(r, asNum(r.qty) + addQty);
-            }
-            remaining = 0;
-        }
-    }
-
-    // 4) Cap ≤ target: turunkan harga (qty lock & harga unlock), lalu kurangi qty
-    const totalNow = ROUND2(clone.reduce((s, r) => s + subOf(r), 0));
-    if (totalNow > target + 1e-6) {
-        let over = ROUND2(totalNow - target);
-
-        // 4a) turunkan harga pada (qty lock & harga unlock) ke batas min clamp
-        const priceAdj = clone.filter((r) => r.qtyLocked && !r.hargaLocked && asNum(r.qty) > 0);
-        if (priceAdj.length > 0 && over > 0) {
-            const reducibles = priceAdj.map((r) => {
-                const q = asNum(r.qty), p = asNum(r.harga), minP = asNum(r.msrp) * MIN_RATIO;
-                const cap = Math.max(0, (p - minP) * q * normPct(r.persen));
-                return { r, q, p, minP, cap };
-            });
-            const totalCap = reducibles.reduce((a, x) => a + x.cap, 0);
-            if (totalCap > 0) {
-                const f = Math.min(1, over / totalCap);
-                for (const x of reducibles) {
-                    const dropValue = ROUND2(x.cap * f);
-                    const base = x.q * normPct(x.r.persen);
-                    const dropPerUnit = base > 0 ? ROUND2(dropValue / base) : 0;
-                    setHarga(x.r, x.p - dropPerUnit);
-                }
-                over = ROUND2(clone.reduce((s, r) => s + subOf(r), 0) - target);
-            }
-        }
-
-        // 4b) kurangi qty pada baris qty unlock (jaga ≥ 0.01)
-        if (over > 0) {
-            const qtyAdj = clone.filter((r) => (r.hargaLocked && !r.qtyLocked) || (!r.hargaLocked && !r.qtyLocked));
-            const capacity = qtyAdj.reduce((a, r) => {
-                const room = Math.max(0, asNum(r.qty) - MIN_QTY);
-                return a + ROUND2(asNum(r.harga) * normPct(r.persen) * room);
-            }, 0);
-            if (capacity > 0) {
-                const f = Math.min(1, over / capacity);
-                for (const r of qtyAdj) {
-                    const room = Math.max(0, asNum(r.qty) - MIN_QTY);
-                    const reducibleValue = ROUND2(asNum(r.harga) * normPct(r.persen) * room);
-                    const take = ROUND2(reducibleValue * f);
-                    const base = asNum(r.harga) * normPct(r.persen);
-                    const reduceQty = base > 0 ? ROUND2(take / base) : 0;
-                    setQty(r, asNum(r.qty) - reduceQty);
-                }
-            }
-        }
-    }
-
-    // normalisasi akhir (pastikan clamp/min tetap)
+    // 3) Normalisasi akhir
     clone.forEach((r) => {
         if (!r.hargaLocked) setHarga(r, asNum(r.harga));
         if (!r.qtyLocked) setQty(r, asNum(r.qty));
@@ -201,6 +152,7 @@ export function recommendScope(rows, targetRp) {
 
     return patch;
 }
+
 
 // ===== Global capping agar total semua scope ≤ target global =====
 export function enforceGlobalCap(rows, targetGlobal) {
