@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth-server"
 import prisma from "@/lib/db"
 import ItemsProvider from "@/providers/ItemsProvider";
 import KategoriProvider from "@/providers/KategoriProvider";
+import {UserProvider} from "@/providers/UserProvider";
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -35,17 +36,19 @@ export default async function RootLayout({ children }) {
         <html lang="en" suppressHydrationWarning>
         <body className="antialiased" suppressHydrationWarning>
         <ThemeProvider>
-            {user ? (
-                <AppSidebarLayout user={user}>
-                    <KategoriProvider>
-                        <ItemsProvider>
-                            {children}
-                        </ItemsProvider>
-                    </KategoriProvider>
-                </AppSidebarLayout>
-            ) : (
-                children
-            )}
+            <UserProvider user={user}>
+                {user ? (
+                    <AppSidebarLayout user={user}>
+                        <KategoriProvider>
+                            <ItemsProvider>
+                                {children}
+                            </ItemsProvider>
+                        </KategoriProvider>
+                    </AppSidebarLayout>
+                ) : (
+                    children
+                )}
+            </UserProvider>
         </ThemeProvider>
         </body>
         </html>

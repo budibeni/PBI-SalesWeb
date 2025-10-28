@@ -10,17 +10,20 @@ import DialogSave from "./DialogSave"
 import DialogList from "./DialogList"
 import PrintSimulasi from "./PrintSimulasi"
 import { useReactToPrint } from "react-to-print"
+import { useUser } from "@/providers/UserProvider"
 
 const CAT_ALL = "__ALL__"
 
 export default function Page() {
-    const { ready, loading, items, refresh } = useItems()
+    const {ready, loading, items, refresh} = useItems()
+    const user = useUser()
+    const isAdmin = user?.role === "admin"
 
     // --- state utama ---
     const [idSimulasi, setIdSimulasi] = React.useState(null)
     const [judulSimulasi, setJudulSimulasi] = React.useState("")
     const [rows, setRows] = React.useState([])
-    const [targetKomisi, setTargetKomisi] = React.useState({ global: "", perKategori: {} })
+    const [targetKomisi, setTargetKomisi] = React.useState({global: "", perKategori: {}})
     const [achievementValue, setAchievementValue] = React.useState({})
     const [showAchTarget, setShowAchTarget] = React.useState(false)
     const [komisiDasar, setKomisiDasar] = React.useState(0)
@@ -55,7 +58,7 @@ export default function Page() {
         setRows([])
         setKomisiDasar(0)
         setAchievementValue({})
-        setTargetKomisi({ global: "", perKategori: {} })
+        setTargetKomisi({global: "", perKategori: {}})
         setShowAchTarget(false)
         setSelectedCat(CAT_ALL)
         setSummary({
@@ -82,7 +85,7 @@ export default function Page() {
     }
     const onRemoveRow = (id) => setRows((prev) => prev.filter((x) => x.id !== id))
     const onChangeRow = (id, patch) =>
-        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+        setRows((prev) => prev.map((r) => (r.id === id ? {...r, ...patch} : r)))
 
     // Payload builder
     const buildPayload = React.useCallback(() => {
@@ -150,7 +153,7 @@ export default function Page() {
                 mode === "create" ? "/api/komisi" : `/api/komisi/${idSimulasi}`,
                 {
                     method: mode === "create" ? "POST" : "PATCH",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {"Content-Type": "application/json"},
                     body: JSON.stringify(payload),
                 }
             )
@@ -223,7 +226,7 @@ export default function Page() {
 
     const handleDelete = async (id) => {
         try {
-            const res = await fetch(`/api/komisi/${id}`, { method: "DELETE" })
+            const res = await fetch(`/api/komisi/${id}`, {method: "DELETE"})
             const json = await res.json()
             if (!json.ok) throw new Error(json.error || "Gagal menghapus")
             alert("Data berhasil dihapus.")
@@ -264,6 +267,7 @@ export default function Page() {
                 expand={showAchTarget}
                 onExpandChange={setShowAchTarget}
                 onKomisiDasarChange={setKomisiDasar}
+                isAdmin={isAdmin}
             />
 
             <AchTarget
@@ -300,7 +304,7 @@ export default function Page() {
 
             {/* Elemen tersembunyi untuk hasil cetak */}
             <div className="hidden">
-                <PrintSimulasi ref={printRef} data={printData} />
+                <PrintSimulasi ref={printRef} data={printData}/>
             </div>
         </div>
     )

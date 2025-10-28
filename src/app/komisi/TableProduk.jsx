@@ -9,7 +9,7 @@ import { Trash2, Lock, Unlock, Grid2X2Check, ChevronUp, ChevronDown } from "luci
 import { fmt } from "./utils"
 
 import {
-    asNum, ROUND2, normPct,
+    asNum, ROUND2,
     MIN_RATIO, MAX_RATIO, MIN_QTY,
     parseTargetKomisiObj,
     recommendScope,
@@ -19,7 +19,7 @@ import {
 
 import NumericInput from "@/components/ui/NumericInput"
 import SearchItem from "@/app/komisi/SearchItem"
-import {Separator} from "@/components/ui/separator";
+import { Separator } from "@/components/ui/separator"
 
 const CAT_ALL = "__ALL__"
 const toNumericString = (n) => String(ROUND2(n))
@@ -36,8 +36,11 @@ export default function TableProduk({
                                         onExpandChange = () => {},
                                         targetKomisi = null,
                                         onKomisiDasarChange,
+                                        // 🔹 tambahkan prop ini; kirim true jika user admin
+                                        isAdmin = false,
                                     }) {
     const activeFilter = (selectedCat ?? CAT_ALL)
+    const showHpp = isAdmin === true
 
     const itemById = React.useMemo(() => {
         const m = new Map(items.map((it) => [it.id, it]))
@@ -55,10 +58,16 @@ export default function TableProduk({
         })
     }, [rows, activeFilter, itemById])
 
-    // Komisi dasar untuk TAMPILAN (hanya baris yang terlihat sekarang)
+    // helper ambil HPP (tetap dipakai untuk kalkulasi)
+    const getHppFor = React.useCallback((r) => {
+        const it = itemById(r.id) || {}
+        return Number(it?.hpp ?? r.hpp ?? 0)
+    }, [itemById])
+
+    // Komisi dasar untuk TAMPILAN (hanya baris yang terlihat)
     const totalKomisiDasar = React.useMemo(
-        () => visibleRows.reduce((sum, r) => sum + subOf(r), 0),
-        [visibleRows]
+        () => visibleRows.reduce((sum, r) => sum + subOf({ ...r, hpp: getHppFor(r) }), 0),
+        [visibleRows, getHppFor]
     )
 
     const applyPatch = React.useCallback((patchMap) => {
@@ -125,16 +134,16 @@ export default function TableProduk({
             const it = itemById(r.id) || {}
             const namaKategoriAsli = (it.kategori ?? "").toString().trim()
             const kategoriTampil = namaKategoriAsli || "Tanpa Kategori"
-            const nilai = subOf(r)
+            const nilai = subOf({ ...r, hpp: getHppFor(r) })
             m.set(kategoriTampil, (m.get(kategoriTampil) || 0) + nilai)
         })
         return m
-    }, [rows, itemById])
+    }, [rows, itemById, getHppFor])
 
     const komisiSummaryParts = React.useMemo(() => {
         return Array.from(perCategoryKomisi.entries())
-            .filter(([, v]) => v > 0) // opsional: tampilkan hanya yang > 0
-            .sort(([a], [b]) => a.localeCompare(b)) // rapi & konstan
+            .filter(([, v]) => v > 0)
+            .sort(([a], [b]) => a.localeCompare(b))
             .map(([nama, val]) => `${nama} (Rp. ${fmt(val)})`)
     }, [perCategoryKomisi])
 
@@ -143,7 +152,6 @@ export default function TableProduk({
         [perCategoryKomisi]
     )
 
-    // 🔹 Kirim ke parent payload lengkap { total, perKategori }
     React.useEffect(() => {
         if (typeof onKomisiDasarChange === "function") {
             onKomisiDasarChange({
@@ -156,7 +164,7 @@ export default function TableProduk({
     /* ======================= UI ======================= */
     return (
         <div className="space-y-4 pt-4">
-            {/* ===== MOBILE: Search + Card per-item ===== */}
+            {/* ===== MOBILE ===== */}
             <div className="block sm:hidden space-y-3">
                 <SearchItem
                     onPick={onPick}
@@ -179,7 +187,7 @@ export default function TableProduk({
 
                         const harga = asNum(r.harga)
                         const qty = asNum(r.qty)
-                        const subtotal = harga * qty * normPct(r.persen)
+                        const subtotal = subOf({ ...r, hpp }) // kalkulasi dari komisiLogic
 
                         const kat = String(it.kategori || "").toUpperCase()
                         const isNotDecimal = kat === "BOND" || kat === "SHIELD"
@@ -189,19 +197,20 @@ export default function TableProduk({
                                 <CardContent className="space-y-3">
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <div className="font-medium">{it.kodeItem || "-"}</div>
+                                            <div className={`font-medium ${hpp <= 0 && "line-through"}`}>{it.kodeItem || "-"}</div>
                                             <div className="text-xs text-muted-foreground">{it.namaItem || ""}</div>
                                         </div>
                                         {it.kategori && (
                                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                                            {it.kategori}
-                                          </span>
+                        {it.kategori}
+                      </span>
                                         )}
                                     </div>
 
                                     <div className="flex items-start justify-between text-xs text-muted-foreground">
                                         <div className="font-medium">MSRP : Rp. {fmt(msrp) || "-"}</div>
-                                        <div className="text-xs text-muted-foreground">{fmt(hpp) || ""}</div>
+                                        {/* 🔒 HPP tampil hanya untuk admin */}
+                                        {showHpp && <div className="text-xs text-muted-foreground">HPP: Rp {fmt(hpp) || ""}</div>}
                                     </div>
 
                                     <Separator/>
@@ -281,7 +290,7 @@ export default function TableProduk({
                 )}
             </div>
 
-            {/* ===== DESKTOP: Card membungkus SearchItem + Tabel ===== */}
+            {/* ===== DESKTOP ===== */}
             <Card className="hidden sm:block">
                 <CardContent className="px-6 py-2 space-y-4">
                     <SearchItem
@@ -295,7 +304,8 @@ export default function TableProduk({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-72">Produk</TableHead>
-                                    <TableHead className="w-28 text-right">HPP</TableHead>
+                                    {/* 🔒 Kolom HPP hanya admin */}
+                                    {showHpp && <TableHead className="w-28 text-right">HPP</TableHead>}
                                     <TableHead className="w-28 text-right">MSRP</TableHead>
                                     <TableHead className="w-36 text-right">Harga</TableHead>
                                     <TableHead className="w-28 text-right">Qty</TableHead>
@@ -313,7 +323,7 @@ export default function TableProduk({
 
                                     const harga = asNum(r.harga)
                                     const qty = asNum(r.qty)
-                                    const subtotal = harga * qty * normPct(r.persen)
+                                    const subtotal = subOf({ ...r, hpp }) // kalkulasi dari komisiLogic
 
                                     const kat = String(it.kategori || "").toUpperCase()
                                     const isNotDecimal = kat === "BOND" || kat === "SHIELD"
@@ -322,11 +332,11 @@ export default function TableProduk({
                                         <TableRow key={r.id}>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="font-medium leading-tight">{it.kodeItem || "-"}</div>
+                                                    <div className={`font-medium leading-tight ${hpp <= 0 && "line-through"}`}>{it.kodeItem || "-"}</div>
                                                     {String(activeFilter).toLowerCase() === CAT_ALL.toLowerCase() && it.kategori && (
                                                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                                                      {it.kategori}
-                                                    </span>
+                              {it.kategori}
+                            </span>
                                                     )}
                                                 </div>
                                                 <div className="text-xs text-muted-foreground leading-tight mt-1">
@@ -334,9 +344,12 @@ export default function TableProduk({
                                                 </div>
                                             </TableCell>
 
-                                            <TableCell className="text-right text-muted-foreground">
-                                                Rp {fmt(hpp)}
-                                            </TableCell>
+                                            {/* 🔒 HPP cell hanya admin */}
+                                            {showHpp && (
+                                                <TableCell className="text-right text-muted-foreground">
+                                                    Rp {fmt(hpp)}
+                                                </TableCell>
+                                            )}
 
                                             <TableCell className="text-right text-muted-foreground">
                                                 Rp {fmt(msrp)}
@@ -428,7 +441,7 @@ export default function TableProduk({
 
             {/* Footer buttons */}
             <div className="flex flex-col sm:flex-row w-full items-center gap-2">
-                {/* 🔹 Komisi Dasar (ringkasan per-kategori) di atas (mobile) */}
+                {/* ringkasan (mobile) */}
                 <Card className="block sm:hidden text-xs text-muted-foreground w-full text-center p-2 mb-2">
                     {komisiSummaryParts.length > 0 ? (
                         <>
@@ -440,7 +453,6 @@ export default function TableProduk({
                 </Card>
 
                 <div className="flex w-full sm:w-full items-center justify-between gap-2">
-                    {/* Achievement */}
                     <Button
                         size="sm"
                         variant="outline"
@@ -452,7 +464,7 @@ export default function TableProduk({
                         {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
 
-                    {/* Komisi Dasar — ringkasan di desktop (tengah) */}
+                    {/* ringkasan (desktop) */}
                     <div className="hidden sm:block text-xs text-muted-foreground text-center flex-1">
                         {komisiSummaryParts.length > 0 ? (
                             <>
@@ -463,7 +475,6 @@ export default function TableProduk({
                         )}
                     </div>
 
-                    {/* Minta Rekomendasi — selalu paling kanan di desktop */}
                     {hasTarget && (
                         <Button
                             size="sm"
@@ -478,7 +489,6 @@ export default function TableProduk({
                     )}
                 </div>
 
-                {/* (Opsional) Info kategori aktif & total yang sedang terlihat */}
                 {String(activeFilter).toLowerCase() !== CAT_ALL.toLowerCase() && (
                     <div className="block w-full text-[10px] text-muted-foreground text-center sm:hidden">
                         (Kategori aktif: <b>{activeFilter}</b> → Rp. {fmt(totalKomisiDasar)})

@@ -1,4 +1,4 @@
-// komisi/logic/komisiLogic.js
+// komisi/komisiLogic.js
 
 // ===== Angka & konstanta dasar =====
 export const ROUND2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -23,8 +23,18 @@ export const clampPrice = (price, msrp) => {
 
 export const ensureQty = (q) => ROUND2(Math.max(asNum(q), MIN_QTY));
 
-export const subOf = (row) =>
-    ROUND2(asNum(row.harga)) * ROUND2(asNum(row.qty)) * normPct(row.persen || 0);
+export const subOf = (row) => {
+    const harga  = asNum(row.harga)
+    const hpp    = asNum(row.hpp)
+    const qty    = asNum(row.qty)
+    const persen = asNum(row.persen)
+
+    if (!hpp || hpp <= 0) return 0
+
+    const margin = Math.max(0, harga - hpp)
+    return ROUND2(margin * qty * persen)
+}
+
 
 // ===== Target parsing (sinkron dengan TargetKomisi.jsx) =====
 export function parseTargetKomisiObj(targetKomisi) {
