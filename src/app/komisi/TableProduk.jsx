@@ -6,20 +6,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Lock, Unlock, Grid2X2Check, ChevronUp, ChevronDown } from "lucide-react"
-import { fmt } from "./utils"
 
-import {
-    asNum, ROUND2,
-    MIN_RATIO, MAX_RATIO, MIN_QTY,
-    parseTargetKomisiObj,
-    recommendScope,
-    enforceGlobalCap,
-    subOf
-} from "./komisiLogic"
+// ⬇️ ganti import lama -> modular
+import { ROUND2, asNum } from "./logic/TableProduk/math"
+import { MIN_QTY, MIN_RATIO, MAX_RATIO } from "./logic/TableProduk/rules"
+import { calcSubtotal } from "./logic/TableProduk/subtotal"
+import { parseTarget } from "./logic/TableProduk/targets"
+import { recommendEqualShare, capToGlobal } from "./logic/TableProduk/recommend"
 
 import NumericInput from "@/components/ui/NumericInput"
 import SearchItem from "@/app/komisi/SearchItem"
 import { Separator } from "@/components/ui/separator"
+import {fmt} from "@/lib/format";
 
 const CAT_ALL = "__ALL__"
 const toNumericString = (n) => String(ROUND2(n))
@@ -65,7 +63,7 @@ export default function TableProduk({
 
     // Komisi dasar untuk TAMPILAN (hanya baris yang terlihat)
     const totalKomisiDasar = React.useMemo(
-        () => visibleRows.reduce((sum, r) => sum + subOf({ ...r, hpp: getHppFor(r) }), 0),
+        () => visibleRows.reduce((sum, r) => sum + calcSubtotal({ ...r, hpp: getHppFor(r) }), 0),
         [visibleRows, getHppFor]
     )
 
@@ -79,7 +77,7 @@ export default function TableProduk({
     }, [onChangeRow])
 
     const recommend = () => {
-        const cfg = parseTargetKomisiObj(targetKomisi)
+        const cfg = parseTarget(targetKomisi)               // ⬅️ parseTarget (was parseTargetKomisiObj)
         if (!cfg || cfg.mode === "NONE") {
             alert("Target komisi belum ditentukan.")
             return
@@ -93,21 +91,22 @@ export default function TableProduk({
         let allPatch = {}
 
         if (cfg.mode === "GLOBAL") {
-            allPatch = { ...allPatch, ...recommendScope(rows, cfg.global) }
+            allPatch = { ...allPatch, ...recommendEqualShare(rows, cfg.global) } // ⬅️ equal-share
         } else if (cfg.mode === "BY_CATEGORY") {
             cfg.perCat.forEach((targetVal, katKey) => {
                 const scope = rows.filter((r) => categoryOf(r) === String(katKey).toLowerCase())
                 if (scope.length === 0) return
-                Object.assign(allPatch, recommendScope(scope, targetVal))
+                Object.assign(allPatch, recommendEqualShare(scope, targetVal))     // ⬅️ per kategori
             })
             if (cfg.global) {
+                // snap hasil patch per kategori, lalu cap ke global
                 const snap = rows.map((r) => {
                     const p = allPatch[r.id]
                     const hargaNum = p?.harga ?? asNum(r.harga)
                     const qtyNum   = p?.qty   ?? asNum(r.qty)
                     return { ...r, harga: hargaNum, qty: qtyNum }
                 })
-                Object.assign(allPatch, enforceGlobalCap(snap, cfg.global))
+                Object.assign(allPatch, capToGlobal(snap, cfg.global))             // ⬅️ capToGlobal (was enforceGlobalCap)
             }
         }
 
@@ -115,7 +114,7 @@ export default function TableProduk({
     }
 
     const hasTarget = React.useMemo(() => {
-        const cfg = parseTargetKomisiObj(targetKomisi)
+        const cfg = parseTarget(targetKomisi)
         if (!cfg || cfg.mode === "NONE") return false
         if (cfg.mode === "GLOBAL") return (cfg.global ?? 0) > 0
         if (cfg.mode === "BY_CATEGORY") {
@@ -133,7 +132,7 @@ export default function TableProduk({
             const it = itemById(r.id) || {}
             const namaKategoriAsli = (it.kategori ?? "").toString().trim()
             const kategoriTampil = namaKategoriAsli || "Tanpa Kategori"
-            const nilai = subOf({ ...r, hpp: getHppFor(r) })
+            const nilai = calcSubtotal({ ...r, hpp: getHppFor(r) })
             m.set(kategoriTampil, (m.get(kategoriTampil) || 0) + nilai)
         })
         return m
@@ -186,7 +185,7 @@ export default function TableProduk({
 
                         const harga = asNum(r.harga)
                         const qty = asNum(r.qty)
-                        const subtotal = subOf({ ...r, hpp }) // kalkulasi dari komisiLogic
+                        const subtotal = calcSubtotal({ ...r, hpp }) // ⬅️ was subOf
 
                         const kat = String(it.kategori || "").toUpperCase()
                         const isNotDecimal = kat === "BOND" || kat === "SHIELD"
@@ -208,7 +207,6 @@ export default function TableProduk({
 
                                     <div className="flex items-start justify-between text-xs text-muted-foreground">
                                         <div className="font-medium">MSRP : Rp. {fmt(msrp) || "-"}</div>
-                                        {/* 🔒 HPP tampil hanya untuk admin */}
                                         {showHpp && <div className="text-xs text-muted-foreground">HPP: Rp {fmt(hpp) || ""}</div>}
                                     </div>
 
@@ -303,7 +301,6 @@ export default function TableProduk({
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-72">Produk</TableHead>
-                                    {/* 🔒 Kolom HPP hanya admin */}
                                     {showHpp && <TableHead className="w-28 text-right">HPP</TableHead>}
                                     <TableHead className="w-28 text-right">MSRP</TableHead>
                                     <TableHead className="w-36 text-right">Harga</TableHead>
@@ -322,7 +319,7 @@ export default function TableProduk({
 
                                     const harga = asNum(r.harga)
                                     const qty = asNum(r.qty)
-                                    const subtotal = subOf({ ...r, hpp }) // kalkulasi dari komisiLogic
+                                    const subtotal = calcSubtotal({ ...r, hpp }) // ⬅️ was subOf
 
                                     const kat = String(it.kategori || "").toUpperCase()
                                     const isNotDecimal = kat === "BOND" || kat === "SHIELD"
@@ -343,7 +340,6 @@ export default function TableProduk({
                                                 </div>
                                             </TableCell>
 
-                                            {/* 🔒 HPP cell hanya admin */}
                                             {showHpp && (
                                                 <TableCell className="text-right text-muted-foreground">
                                                     Rp {fmt(hpp)}

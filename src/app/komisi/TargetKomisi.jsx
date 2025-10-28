@@ -5,7 +5,7 @@ import { useKategori } from "@/providers/KategoriProvider"
 import { Button } from "@/components/ui/button"
 import NumericInput from "@/components/ui/NumericInput"
 import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react"
-import { fmt } from "./utils"
+import {fmt} from "@/lib/format";
 
 const isFilled = (v) => String(v ?? "").trim().length > 0
 const toNumAny = (raw) => {

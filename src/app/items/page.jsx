@@ -28,7 +28,7 @@ import {
     Calculator, Image as ImageIcon, Link as LinkIcon, Tag
 } from "lucide-react"
 
-import { fmt } from "@/app/komisi/utils"
+import {fmt} from "@/lib/format";
 import NumericInput from "@/components/ui/NumericInput"
 
 const CAT_ALL = "__ALL__"
