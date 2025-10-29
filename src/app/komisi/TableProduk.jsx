@@ -33,7 +33,7 @@ export default function TableProduk({
                                         expand = false,
                                         onExpandChange = () => {},
                                         targetKomisi = null,
-                                        onKomisiDasarChange,
+                                        onKomisiKategoriChange,
                                         isAdmin = false,
                                     }) {
     const activeFilter = (selectedCat ?? CAT_ALL)
@@ -62,7 +62,7 @@ export default function TableProduk({
     }, [itemById])
 
     // Komisi dasar untuk TAMPILAN (hanya baris yang terlihat)
-    const totalKomisiDasar = React.useMemo(
+    const totalKomisiKategori = React.useMemo(
         () => visibleRows.reduce((sum, r) => sum + calcSubtotal({ ...r, hpp: getHppFor(r) }), 0),
         [visibleRows, getHppFor]
     )
@@ -151,13 +151,13 @@ export default function TableProduk({
     )
 
     React.useEffect(() => {
-        if (typeof onKomisiDasarChange === "function") {
-            onKomisiDasarChange({
+        if (typeof onKomisiKategoriChange === "function") {
+            onKomisiKategoriChange({
                 total: grandTotalKomisi,
                 perKategori: Object.fromEntries(perCategoryKomisi.entries()),
             })
         }
-    }, [grandTotalKomisi, perCategoryKomisi, onKomisiDasarChange])
+    }, [grandTotalKomisi, perCategoryKomisi, onKomisiKategoriChange])
 
     /* ======================= UI ======================= */
     return (
@@ -486,7 +486,7 @@ export default function TableProduk({
 
                 {String(activeFilter).toLowerCase() !== CAT_ALL.toLowerCase() && (
                     <div className="block w-full text-[10px] text-muted-foreground text-center sm:hidden">
-                        (Kategori aktif: <b>{activeFilter}</b> → Rp. {fmt(totalKomisiDasar)})
+                        (Kategori aktif: <b>{activeFilter}</b> → Rp. {fmt(totalKomisiKategori)})
                     </div>
                 )}
             </div>

@@ -34,8 +34,11 @@ export async function PATCH(req, { params }) {
         const namaUser = user?.akun || user?.nama || user?.email || "system"
 
         if (body.persentase !== undefined) data.persentase = numOrNull(body.persentase)
+        if (body.minAchKomisiDasar !== undefined) data.minAchKomisiDasar = numOrNull(body.minAchKomisiDasar)
         if (body.minAchBonusUtama !== undefined) data.minAchBonusUtama = numOrNull(body.minAchBonusUtama)
+        if (body.valueBonusUtama !== undefined) data.valueBonusUtama = numOrNull(body.valueBonusUtama)
         if (body.minAchBonusExtra !== undefined) data.minAchBonusExtra = numOrNull(body.minAchBonusExtra)
+        if (body.valueBonusExtra !== undefined) data.valueBonusExtra = numOrNull(body.valueBonusExtra)
         data.diubahOleh = namaUser
 
         const updated = await prisma.tbMasterKomisi.update({ where: { id: params.id }, data })

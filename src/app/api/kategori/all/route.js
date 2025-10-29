@@ -14,15 +14,15 @@ export async function GET(req) {
     try {
         const rows = await prisma.tbMasterKomisi.findMany({
             orderBy: { kategori: "asc" },
-            select: {
-                id: true,
-                kategori: true,
-                persentase: true,
-                minAchBonusUtama: true,
-                minAchBonusExtra: true,
-                dibuatTanggal: true,
-                diubahTanggal: true,
-            },
+            // select: {
+            //     id: true,
+            //     kategori: true,
+            //     persentase: true,
+            //     minAchBonusUtama: true,
+            //     minAchBonusExtra: true,
+            //     dibuatTanggal: true,
+            //     diubahTanggal: true,
+            // },
         })
 
         const body = JSON.stringify({ success: true, total: rows.length, items: rows })

@@ -13,9 +13,10 @@ import { useReactToPrint } from "react-to-print"
 import { useUser } from "@/providers/UserProvider"
 
 const CAT_ALL = "__ALL__"
+const j = (v) => JSON.stringify(v ?? null)
 
 export default function Page() {
-    const {ready, loading, items, refresh} = useItems()
+    const { ready, loading, items, refresh } = useItems()
     const user = useUser()
     const isAdmin = user?.role === "admin"
 
@@ -23,11 +24,19 @@ export default function Page() {
     const [idSimulasi, setIdSimulasi] = React.useState(null)
     const [judulSimulasi, setJudulSimulasi] = React.useState("")
     const [rows, setRows] = React.useState([])
-    const [targetKomisi, setTargetKomisi] = React.useState({global: "", perKategori: {}})
-    const [achievementValue, setAchievementValue] = React.useState({})
+
+    const [targetKomisi, setTargetKomisi] = React.useState({ global: "", perKategori: {} })
+
+    // ✅ hanya pakai array detail (AchRow[])
+    const [achievementRows, setAchievementRows] = React.useState([])
+    const setAchievementRowsSafe = React.useCallback((next) => {
+        setAchievementRows((prev) => (j(prev) === j(next) ? prev : next))
+    }, [])
+
     const [showAchTarget, setShowAchTarget] = React.useState(false)
-    const [komisiDasar, setKomisiDasar] = React.useState(0)
+    const [komisiKategori, setKomisiKategori] = React.useState(0)
     const [selectedCat, setSelectedCat] = React.useState(CAT_ALL)
+
     const [summary, setSummary] = React.useState({
         komisiDasarTotal: 0,
         komisiDasarPerKategori: {},
@@ -56,9 +65,9 @@ export default function Page() {
         setIdSimulasi(null)
         setJudulSimulasi("")
         setRows([])
-        setKomisiDasar(0)
-        setAchievementValue({})
-        setTargetKomisi({global: "", perKategori: {}})
+        setKomisiKategori(0)
+        setAchievementRows([])
+        setTargetKomisi({ global: "", perKategori: {} })
         setShowAchTarget(false)
         setSelectedCat(CAT_ALL)
         setSummary({
@@ -85,14 +94,13 @@ export default function Page() {
     }
     const onRemoveRow = (id) => setRows((prev) => prev.filter((x) => x.id !== id))
     const onChangeRow = (id, patch) =>
-        setRows((prev) => prev.map((r) => (r.id === id ? {...r, ...patch} : r)))
+        setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
-    // Payload builder
+    // Payload builder (API sudah pakai struktur baru)
     const buildPayload = React.useCallback(() => {
         const tgRaw = String(targetKomisi?.global ?? "").trim()
         const targetGlobal = tgRaw ? Number(tgRaw) : null
 
-        // deteksi mode persen atau nominal
         const isPercentMode = !!targetGlobal && !Number.isNaN(targetGlobal) && targetGlobal > 0
         const rawPerKat = targetKomisi?.perKategori || {}
         const targetKategoriSaved = Object.fromEntries(
@@ -111,7 +119,10 @@ export default function Page() {
             judul: judulSimulasi || "Simulasi Komisi",
             targetGlobal,
             targetKategori: targetKategoriSaved,
-            achievementKategori: achievementValue || {},
+
+            // ✅ hanya kirim struktur baru
+            achievementKategori: achievementRows || [],
+
             komisiDasarTotal: Number(summary.komisiDasarTotal || 0),
             komisiDasarKategori: summary.komisiDasarPerKategori || {},
             bonusUtamaTotal: Number(summary.bonusUtamaTotal || 0),
@@ -119,6 +130,7 @@ export default function Page() {
             bonusExtraTotal: Number(summary.bonusExtraTotal || 0),
             bonusExtraKategori: summary.bonusExtraPerKategori || {},
             subtotalTotal: Number(summary.subtotalTotal || 0),
+
             rowsItem: rows.map((r) => {
                 const it = itemById(r.id) || {}
                 return {
@@ -136,7 +148,7 @@ export default function Page() {
                 }
             }),
         }
-    }, [judulSimulasi, targetKomisi, achievementValue, summary, rows, itemById])
+    }, [judulSimulasi, targetKomisi, achievementRows, summary, rows, itemById])
 
     // Simpan baru / update
     const handleSave = async () => {
@@ -153,7 +165,7 @@ export default function Page() {
                 mode === "create" ? "/api/komisi" : `/api/komisi/${idSimulasi}`,
                 {
                     method: mode === "create" ? "POST" : "PATCH",
-                    headers: {"Content-Type": "application/json"},
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                 }
             )
@@ -194,7 +206,12 @@ export default function Page() {
                 global: String(d.targetGlobal ?? ""),
                 perKategori: d.targetKategori || {},
             })
-            setAchievementValue(d.achievementKategori || {})
+
+            // ✅ muat struktur baru; set aman (hindari setState kalau sama)
+            setAchievementRowsSafe(
+                Array.isArray(d.achievementKategori) ? d.achievementKategori : []
+            )
+
             setSummary({
                 komisiDasarTotal: d.komisiDasarTotal || 0,
                 komisiDasarPerKategori: d.komisiDasarKategori || {},
@@ -226,17 +243,15 @@ export default function Page() {
 
     const handleDelete = async (id) => {
         try {
-            const res = await fetch(`/api/komisi/${id}`, {method: "DELETE"})
+            const res = await fetch(`/api/komisi/${id}`, { method: "DELETE" })
             const json = await res.json()
             if (!json.ok) throw new Error(json.error || "Gagal menghapus")
             alert("Data berhasil dihapus.")
-            // Refresh list setelah hapus
             setListData((prev) => prev.filter((x) => x.id !== id))
         } catch (err) {
             alert("Gagal menghapus: " + err.message)
         }
     }
-
 
     return (
         <div>
@@ -266,23 +281,22 @@ export default function Page() {
                 targetKomisi={targetKomisi}
                 expand={showAchTarget}
                 onExpandChange={setShowAchTarget}
-                onKomisiDasarChange={setKomisiDasar}
+                onKomisiKategoriChange={setKomisiKategori}
                 isAdmin={isAdmin}
             />
 
             <AchTarget
                 show={showAchTarget}
-                value={achievementValue}
-                onComputed={setAchievementValue}
+                valueRows={achievementRows}      // nilai awal array
+                onComputed={setAchievementRowsSafe} // hasil array detail (aman)
             />
 
             <FooterPage
-                komisiDasar={komisiDasar}
-                achvment={achievementValue}
+                komisiKategori={komisiKategori}
+                achvmentRows={achievementRows}
                 onSummaryChange={setSummary}
             />
 
-            {/* Dialog Simpan Baru */}
             <DialogSave
                 open={showDialog}
                 onOpenChange={setShowDialog}
@@ -292,7 +306,6 @@ export default function Page() {
                 saving={saving}
             />
 
-            {/* Dialog List Simulasi + tombol Print */}
             <DialogList
                 open={showList}
                 onOpenChange={setShowList}
@@ -302,9 +315,8 @@ export default function Page() {
                 onDelete={handleDelete}
             />
 
-            {/* Elemen tersembunyi untuk hasil cetak */}
             <div className="hidden">
-                <PrintSimulasi ref={printRef} data={printData}/>
+                <PrintSimulasi ref={printRef} data={printData} />
             </div>
         </div>
     )

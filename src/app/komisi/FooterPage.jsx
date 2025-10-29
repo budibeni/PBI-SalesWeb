@@ -7,66 +7,108 @@ import { Wallet, Gift, GiftIcon, Sigma } from "lucide-react";
 const nf = (n) =>
     Number(n || 0).toLocaleString("id-ID", { maximumFractionDigits: 2 });
 
-/**
- * FooterPage
- * - komisiDasar: number ATAU { total, perKategori }
- * - achvment: Record<string, number> // 0..1..n
- * - onSummaryChange?: (summary) => void   ← NEW
- * - bonusUtama = Σ (0.10 × perKategori[k])
- * - bonusExtra = Σ ( (perKategori[k] * achvment[k] * 1.2) - (perKategori[k] + bonusUtamaK) ) jika achvment[k] >= 1
- * - total = totalDasar + bonusUtama + bonusExtra
- */
-export default function FooterPage({ komisiDasar = 0, achvment = {}, onSummaryChange }) {
-    // Normalisasi komisi dasar
-    const totalDasar =
-        Number(
-            typeof komisiDasar === "object" && komisiDasar !== null
-                ? komisiDasar.total
-                : komisiDasar
-        ) || 0;
-
+export default function FooterPage({
+                                       komisiKategori = 0,
+                                       achvmentRows = [],
+                                       onSummaryChange,
+                                   }) {
+    // Normalisasi input komisi per kategori
     const perKategori =
-        (typeof komisiDasar === "object" &&
-            komisiDasar !== null &&
-            komisiDasar.perKategori) ||
+        (typeof komisiKategori === "object" &&
+            komisiKategori !== null &&
+            komisiKategori.perKategori) ||
         {};
 
-    // 🔹 Bonus Utama (10%)
-    const { bonusUtamaMap, bonusUtama } = React.useMemo(() => {
-        const m = {};
-        let sum = 0;
-        for (const [k, v] of Object.entries(perKategori)) {
-            const dasar = Number(v) || 0;
-            const bonusK = dasar * 0.1;
-            m[k] = bonusK;
-            sum += bonusK;
+    // Buat lookup dari AchRow[], lengkap dengan default aman
+    const achMap = React.useMemo(() => {
+        const m = new Map();
+        for (const r of achvmentRows || []) {
+            if (!r?.kategori) continue;
+            m.set(r.kategori, {
+                achievement: Number(r.achievement) || 0,
+                minAchKomisiDasar:
+                    r.minAchKomisiDasar == null ? 0 : Number(r.minAchKomisiDasar) || 0,
+                minBonusUtama:
+                    r.minBonusUtama == null ? 0 : Number(r.minBonusUtama) || 0,
+                valueBonusUtama:
+                    r.valueBonusUtama == null ? 0 : Number(r.valueBonusUtama) || 0,
+                minBonusExtra:
+                    r.minBonusExtra == null ? 1.0 : Number(r.minBonusExtra) || 0,
+                valueBonusExtra:
+                    r.valueBonusExtra == null ? 0 : Number(r.valueBonusExtra) || 0,
+            });
         }
-        return { bonusUtamaMap: m, bonusUtama: sum };
-    }, [perKategori]);
+        return m;
+    }, [achvmentRows]);
 
-    // 🔹 Bonus Extra (hanya achvment >= 1)
-    const { bonusExtraMap, bonusExtra } = React.useMemo(() => {
-        const map = {};
+    // 1) Komisi Dasar per Kategori (hanya jika achievement >= minAchKomisiDasar)
+    const { dasarMap, totalDasar } = React.useMemo(() => {
+        const m = {};
         let sum = 0;
         for (const [k, dasarVal] of Object.entries(perKategori)) {
             const dasar = Number(dasarVal) || 0;
-            const ach = Number(achvment?.[k]);
-            if (!Number.isFinite(ach) || ach < 1) continue;
-            const bUtamaK = Number(bonusUtamaMap[k]) || 0;
-            const extraK = dasar * ach * 1.2 - (dasar + bUtamaK);
-            map[k] = extraK;
+            const a = achMap.get(k);
+            const ach = a?.achievement ?? 0;
+            const minAch = a?.minAchKomisiDasar ?? 0;
+            const value = ach >= minAch ? dasar : 0;
+
+            m[k] = value;
+            sum += value;
+        }
+        return { dasarMap: m, totalDasar: sum };
+    }, [perKategori, achMap]);
+
+    // 2) Bonus Utama per Kategori (jika achievement >= minBonusUtama)
+    //    Rumus: komisiDasarPerKategori * valueBonusUtama
+    const { bonusUtamaMap, bonusUtama } = React.useMemo(() => {
+        const m = {};
+        let sum = 0;
+        for (const k of Object.keys(perKategori)) {
+            const dasarK = Number(dasarMap[k]) || 0; // sudah ter-filter dari poin 1
+            const a = achMap.get(k);
+            const ach = a?.achievement ?? 0;
+            const minUtama = a?.minBonusUtama ?? 0;
+            const valUtama = a?.valueBonusUtama ?? 0;
+
+            const v = ach >= minUtama ? dasarK * valUtama : 0;
+            m[k] = v;
+            sum += v;
+        }
+        return { bonusUtamaMap: m, bonusUtama: sum };
+    }, [perKategori, achMap, dasarMap]);
+
+    // 3) Bonus Extra per Kategori (jika achievement >= minBonusExtra)
+    //    Rumus: (achievement * komisiDasarPerKategori * valueBonusExtra) - (komisiDasarPerKategori + bonusUtamaPerKategori)
+    const { bonusExtraMap, bonusExtra } = React.useMemo(() => {
+        const m = {};
+        let sum = 0;
+        for (const k of Object.keys(perKategori)) {
+            const dasarK = Number(dasarMap[k]) || 0;
+            const utamaK = Number(bonusUtamaMap[k]) || 0;
+
+            const a = achMap.get(k);
+            const ach = a?.achievement ?? 0;
+            const minExtra = a?.minBonusExtra ?? 1.0;
+            const valExtra = a?.valueBonusExtra ?? 0;
+
+            const eligible = ach >= minExtra;
+            const extraK = eligible
+                ? ach * dasarK * valExtra - (dasarK + utamaK)
+                : 0;
+
+            m[k] = extraK;
             sum += extraK;
         }
-        return { bonusExtraMap: map, bonusExtra: sum };
-    }, [perKategori, achvment, bonusUtamaMap]);
+        return { bonusExtraMap: m, bonusExtra: sum };
+    }, [perKategori, achMap, dasarMap, bonusUtamaMap]);
 
     const total = totalDasar + bonusUtama + bonusExtra;
 
-    // ⬇️ KIRIM ringkasan ke parent
+    // Kirim ringkasan ke parent
     React.useEffect(() => {
         onSummaryChange?.({
             komisiDasarTotal: totalDasar,
-            komisiDasarPerKategori: perKategori,
+            komisiDasarPerKategori: dasarMap,
             bonusUtamaTotal: bonusUtama,
             bonusUtamaPerKategori: bonusUtamaMap,
             bonusExtraTotal: bonusExtra,
@@ -75,7 +117,7 @@ export default function FooterPage({ komisiDasar = 0, achvment = {}, onSummaryCh
         });
     }, [
         totalDasar,
-        perKategori,
+        dasarMap,
         bonusUtama,
         bonusUtamaMap,
         bonusExtra,
@@ -86,42 +128,42 @@ export default function FooterPage({ komisiDasar = 0, achvment = {}, onSummaryCh
 
     return (
         <div className="sticky bottom-0 left-0 right-0 z-40 py-2 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div
-            className={cn(
-                "bg-background/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur-md",
-                "border-t py-3 sm:py-4"
-            )}
-            role="contentinfo"
-            aria-label="Ringkasan Komisi"
-        >
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                <StatCard
-                    icon={<Wallet className="h-4 w-4" />}
-                    label="Komisi Dasar"
-                    value={`Rp. ${nf(totalDasar)}`}
-                    tone="gray"
-                />
-                <StatCard
-                    icon={<Gift className="h-4 w-4" />}
-                    label="Bonus Utama"
-                    value={`+Rp. ${nf(bonusUtama)}`}
-                    tone="green"
-                />
-                <StatCard
-                    icon={<GiftIcon className="h-4 w-4" />}
-                    label="Bonus Extra"
-                    value={`${bonusExtra >= 0 ? "+" : ""}Rp. ${nf(bonusExtra)}`}
-                    tone="green"
-                />
-                <StatCard
-                    icon={<Sigma className="h-4 w-4" />}
-                    label="Total Komisi"
-                    value={`Rp. ${nf(total)}`}
-                    tone="blue"
-                    emphasize
-                />
+            <div
+                className={cn(
+                    "bg-background/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur-md",
+                    "border-t py-3 sm:py-4"
+                )}
+                role="contentinfo"
+                aria-label="Ringkasan Komisi"
+            >
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                    <StatCard
+                        icon={<Wallet className="h-4 w-4" />}
+                        label="Komisi Dasar"
+                        value={`Rp. ${nf(totalDasar)}`}
+                        tone="gray"
+                    />
+                    <StatCard
+                        icon={<Gift className="h-4 w-4" />}
+                        label="Bonus Utama"
+                        value={`+Rp. ${nf(bonusUtama)}`}
+                        tone="green"
+                    />
+                    <StatCard
+                        icon={<GiftIcon className="h-4 w-4" />}
+                        label="Bonus Extra"
+                        value={`${bonusExtra >= 0 ? "+" : ""}Rp. ${nf(bonusExtra)}`}
+                        tone="green"
+                    />
+                    <StatCard
+                        icon={<Sigma className="h-4 w-4" />}
+                        label="Total Komisi"
+                        value={`Rp. ${nf(total)}`}
+                        tone="blue"
+                        emphasize
+                    />
+                </div>
             </div>
-        </div>
         </div>
     );
 }
@@ -134,12 +176,14 @@ function StatCard({ icon, label, value, tone = "gray", emphasize = false }) {
             value: "text-gray-900 dark:text-gray-100",
         },
         green: {
-            chip: "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+            chip:
+                "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300",
             ring: "ring-green-200/60 dark:ring-green-800/50",
             value: "text-green-800 dark:text-green-200",
         },
         blue: {
-            chip: "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+            chip:
+                "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
             ring: "ring-blue-200/60 dark:ring-blue-800/50",
             value: "text-blue-900 dark:text-blue-100",
         },
