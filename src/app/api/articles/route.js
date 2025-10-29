@@ -78,10 +78,13 @@ export async function POST(req) {
         if (!judul)   return NextResponse.json({ error: "Judul wajib" }, { status: 400 })
         if (!artikel) return NextResponse.json({ error: "Isi artikel wajib" }, { status: 400 })
 
+        const user = await getCurrentUser()
+        const namaUser = user?.akun || user?.nama || user?.email || "system"
+
         const created = await prisma.tbArtikel.create({
             data: {
                 judul, artikel, terbit,
-                dibuatOleh: me.akun || me.email || "system",
+                dibuatOleh: namaUser,
             },
             select: { id: true },
         })

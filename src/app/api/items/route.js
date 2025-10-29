@@ -1,4 +1,6 @@
 // app/api/items/route.js
+import {getCurrentUser} from "@/lib/auth-server";
+
 export const runtime = "nodejs"
 
 import prisma from "@/lib/db"
@@ -74,6 +76,8 @@ export async function GET(req) {
 export async function POST(req) {
     try {
         const body = await req.json()
+        const user = await getCurrentUser()
+        const namaUser = user?.akun || user?.nama || user?.email || "system"
 
         const data = {
             // umum
@@ -100,8 +104,7 @@ export async function POST(req) {
             gambarUrl: strOrNull(body.gambarUrl),
             linkWeb: strOrNull(body.linkWeb),
 
-            // audit
-            dibuatOleh: strOrNull(body.dibuatOleh) ?? "system",
+            dibuatOleh: namaUser,
         }
 
         // validasi minimal

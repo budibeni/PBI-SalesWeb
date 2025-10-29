@@ -1,4 +1,6 @@
 // app/api/items/bulk/route.js
+import {getCurrentUser} from "@/lib/auth-server";
+
 export const runtime = "nodejs"
 
 import prisma from "@/lib/db"
@@ -38,6 +40,9 @@ export async function PATCH(req) {
             data[key] = v
         }
 
+        const user = await getCurrentUser()
+        const namaUser = user?.akun || user?.nama || user?.email || "system"
+
         // === Kolom umum ===
         maybeSet("kategori", body.kategori, strOrNull)
         maybeSet("jenisItem", body.jenisItem, strOrNull)
@@ -60,7 +65,7 @@ export async function PATCH(req) {
         maybeSet("linkWeb", body.linkWeb, strOrNull)
 
         // === Audit ===
-        maybeSet("diubahOleh", body.diubahOleh, strOrNull)
+        maybeSet("diubahOleh", namaUser)
 
         if (Object.keys(data).length === 0) {
             return NextResponse.json({ error: "Tidak ada field yang diubah" }, { status: 400 })

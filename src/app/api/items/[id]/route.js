@@ -1,4 +1,6 @@
 // app/api/items/[id]/route.js
+import {getCurrentUser} from "@/lib/auth-server";
+
 export const runtime = "nodejs"
 
 import prisma from "@/lib/db"
@@ -38,6 +40,8 @@ export async function PATCH(req, { params }) {
     try {
         const body = await req.json()
         const data = {}
+        const user = await getCurrentUser()
+        const namaUser = user?.akun || user?.nama || user?.email || "system"
 
         // — umum —
         if (body.kodeItem !== undefined) {
@@ -80,7 +84,7 @@ export async function PATCH(req, { params }) {
         if (body.linkWeb !== undefined) data.linkWeb = strOrNull(body.linkWeb)
 
         // — audit —
-        if (body.diubahOleh !== undefined) data.diubahOleh = strOrNull(body.diubahOleh) ?? "system"
+        data.diubahOleh = namaUser
 
         const updated = await prisma.tbMasterItem.update({
             where: { id: params.id },

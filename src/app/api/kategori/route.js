@@ -1,3 +1,5 @@
+import {getCurrentUser} from "@/lib/auth-server";
+
 export const runtime = "nodejs"
 
 import prisma from "@/lib/db"
@@ -50,11 +52,16 @@ export async function POST(req) {
             return NextResponse.json({ error: "kategori wajib diisi" }, { status: 400 })
         }
 
+        const user = await getCurrentUser()
+        const namaUser = user?.akun || user?.nama || user?.email || "system"
+
         const created = await prisma.tbMasterKomisi.create({
             data: {
                 kategori,
                 persentase: numOrNull(body.persentase), // contoh: 0.004 = 0.4%
-                dibuatOleh: strOrNull(body.dibuatOleh) ?? "system",
+                minAchBonusUtama: numOrNull(body.minAchBonusUtama),
+                minAchBonusExtra: numOrNull(body.minAchBonusExtra),
+                dibuatOleh: namaUser,
             },
         })
         return NextResponse.json(created, { status: 201 })

@@ -18,6 +18,8 @@ export async function GET(req) {
                 id: true,
                 kategori: true,
                 persentase: true,
+                minAchBonusUtama: true,
+                minAchBonusExtra: true,
                 dibuatTanggal: true,
                 diubahTanggal: true,
             },

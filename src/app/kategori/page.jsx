@@ -109,8 +109,12 @@ export default function KomisiPage() {
                                 <TableRow>
                                     <TableHead className="w-56">Kategori</TableHead>
                                     <TableHead className="w-40">Persentase</TableHead>
-                                    <TableHead className="w-40">Dibuat</TableHead>
-                                    <TableHead className="w-40">Diubah</TableHead>
+                                    <TableHead className="w-40">Min Ach Bonus Utama</TableHead>
+                                    <TableHead className="w-40">Min Ach Bonus Extra</TableHead>
+                                    <TableHead className="w-40">Dibuat Oleh</TableHead>
+                                    <TableHead className="w-40">Diubah Tanggal</TableHead>
+                                    <TableHead className="w-40">Dibuat Oleh</TableHead>
+                                    <TableHead className="w-40">Diubah Tanggal</TableHead>
                                     <TableHead className="w-28 text-right">Aksi</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -121,9 +125,17 @@ export default function KomisiPage() {
                                         <TableCell>
                                             {row.persentase != null ? `${(row.persentase * 100).toFixed(2)}%` : "—"}
                                         </TableCell>
+                                        <TableCell>
+                                            {row.minAchBonusUtama != null ? `${row.minAchBonusUtama.toFixed(2)}%` : "—"}
+                                        </TableCell>
+                                        <TableCell>
+                                            {row.minAchBonusExtra != null ? `${row.minAchBonusExtra.toFixed(2)}%` : "—"}
+                                        </TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{row.dibuatOleh}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">
                                             {row.dibuatTanggal ? new Date(row.dibuatTanggal).toLocaleString() : "—"}
                                         </TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{row.diubahOleh}</TableCell>
                                         <TableCell className="text-xs text-muted-foreground">
                                             {row.diubahTanggal ? new Date(row.diubahTanggal).toLocaleString() : "—"}
                                         </TableCell>
@@ -175,7 +187,7 @@ function CreateDialog({ onDone }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     // simpan sebagai string untuk kontrol NumericInput
-    const [f, setF] = useState({ kategori: "", persentase: "" })
+    const [f, setF] = useState({ kategori: "", persentase: "", minAchBonusUtama: "", minAchBonusExtra: "" })
 
     const submit = async (e) => {
         e.preventDefault()
@@ -184,8 +196,9 @@ function CreateDialog({ onDone }) {
         try {
             const payload = {
                 kategori: f.kategori,
-                // kirim number/null ke server
                 persentase: f.persentase === "" || f.persentase == null ? null : Number(f.persentase),
+                minAchBonusUtama: f.minAchBonusUtama === "" || f.minAchBonusUtama == null ? null : Number(f.minAchBonusUtama),
+                minAchBonusExtra: f.minAchBonusExtra === "" || f.minAchBonusExtra == null ? null : Number(f.minAchBonusExtra),
             }
             const res = await fetch("/api/kategori", {
                 method: "POST",
@@ -195,7 +208,7 @@ function CreateDialog({ onDone }) {
             const j = await res.json().catch(() => ({}))
             if (!res.ok) { alert(j.error || "Gagal tambah"); return }
             setOpen(false)
-            setF({ kategori: "", persentase: "" })
+            setF({ kategori: "", persentase: "", minAchBonusUtama: "", minAchBonusExtra: "" })
             onDone?.()
         } finally { setBusy(false) }
     }
@@ -228,6 +241,30 @@ function CreateDialog({ onDone }) {
                         />
                     </Field>
 
+                    <Field label="Min Ach Bonus Utama (%)">
+                        <NumericInput
+                            value={f.minAchBonusUtama}
+                            onValue={(val) => setF((s) => ({ ...s, minAchBonusUtama: val }))}
+                            decimalScale={8}
+                            fixedDecimalScale={false}
+                            allowNegative={false}
+                            placeholder="cth: 70"
+                            className="w-full"
+                        />
+                    </Field>
+
+                    <Field label="Min Ach Bonus Extra (%)">
+                        <NumericInput
+                            value={f.minAchBonusExtra}
+                            onValue={(val) => setF((s) => ({ ...s, minAchBonusExtra: val }))}
+                            decimalScale={8}
+                            fixedDecimalScale={false}
+                            allowNegative={false}
+                            placeholder="cth: 110"
+                            className="w-full"
+                        />
+                    </Field>
+
                     <div className="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>Batal</Button>
                         <Button type="submit" disabled={busy}>Simpan</Button>
@@ -250,6 +287,8 @@ function EditDialog({ row, onDone }) {
     const [f, setF] = useState({
         kategori: row.kategori,
         persentase: numToStr(row.persentase),
+        minAchBonusUtama: numToStr(row.minAchBonusUtama),
+        minAchBonusExtra: numToStr(row.minAchBonusExtra),
     })
 
     useEffect(() => {
@@ -257,6 +296,8 @@ function EditDialog({ row, onDone }) {
             setF({
                 kategori: row.kategori,
                 persentase: numToStr(row.persentase),
+                minAchBonusUtama: numToStr(row.minAchBonusUtama),
+                minAchBonusExtra: numToStr(row.minAchBonusExtra),
             })
         }
     }, [open, row])
@@ -268,8 +309,9 @@ function EditDialog({ row, onDone }) {
         try {
             const payload = {
                 kategori: f.kategori,
-                // kirim number/null ke server
                 persentase: f.persentase === "" || f.persentase == null ? null : Number(f.persentase),
+                minAchBonusUtama: f.minAchBonusUtama === "" || f.minAchBonusUtama == null ? null : Number(f.minAchBonusUtama),
+                minAchBonusExtra: f.minAchBonusExtra === "" || f.minAchBonusExtra == null ? null : Number(f.minAchBonusExtra),
             }
             const res = await fetch(`/api/kategori/${row.id}`, {
                 method: "PATCH",
@@ -306,6 +348,30 @@ function EditDialog({ row, onDone }) {
                             fixedDecimalScale={false}
                             allowNegative={false}
                             placeholder="cth: 0.004 = 0.4%"
+                            className="w-full"
+                        />
+                    </Field>
+
+                    <Field label="Min Ach Bonus Utama (%)">
+                        <NumericInput
+                            value={f.minAchBonusUtama}
+                            onValue={(val) => setF((s) => ({ ...s, minAchBonusUtama: val }))}
+                            decimalScale={8}
+                            fixedDecimalScale={false}
+                            allowNegative={false}
+                            placeholder="cth: 70"
+                            className="w-full"
+                        />
+                    </Field>
+
+                    <Field label="Min Ach Bonus Extra (%)">
+                        <NumericInput
+                            value={f.minAchBonusExtra}
+                            onValue={(val) => setF((s) => ({ ...s, minAchBonusExtra: val }))}
+                            decimalScale={8}
+                            fixedDecimalScale={false}
+                            allowNegative={false}
+                            placeholder="cth: 110"
                             className="w-full"
                         />
                     </Field>

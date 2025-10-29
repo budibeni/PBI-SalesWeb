@@ -62,8 +62,8 @@ export async function PATCH(req, { params }) {
         if (Object.keys(data).length === 0) {
             return NextResponse.json({ error: "Tidak ada perubahan" }, { status: 400 })
         }
-
-        data.diubahOleh = me.akun || me.email || "system"
+        const user = await getCurrentUser()
+        data.diubahOleh = user?.akun || user?.nama || user?.email || "system"
 
         const updated = await prisma.tbArtikel.update({
             where: { id },

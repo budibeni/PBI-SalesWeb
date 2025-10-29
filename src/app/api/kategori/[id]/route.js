@@ -1,3 +1,5 @@
+import {getCurrentUser} from "@/lib/auth-server";
+
 export const runtime = "nodejs"
 
 import prisma from "@/lib/db"
@@ -27,8 +29,14 @@ export async function PATCH(req, { params }) {
             if (!v) return NextResponse.json({ error: "kategori tidak boleh kosong" }, { status: 400 })
             data.kategori = v
         }
+
+        const user = await getCurrentUser()
+        const namaUser = user?.akun || user?.nama || user?.email || "system"
+
         if (body.persentase !== undefined) data.persentase = numOrNull(body.persentase)
-        if (body.diubahOleh !== undefined) data.diubahOleh = strOrNull(body.diubahOleh) ?? "system"
+        if (body.minAchBonusUtama !== undefined) data.minAchBonusUtama = numOrNull(body.minAchBonusUtama)
+        if (body.minAchBonusExtra !== undefined) data.minAchBonusExtra = numOrNull(body.minAchBonusExtra)
+        data.diubahOleh = namaUser
 
         const updated = await prisma.tbMasterKomisi.update({ where: { id: params.id }, data })
         return NextResponse.json(updated)

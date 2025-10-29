@@ -65,10 +65,8 @@ model TbMasterKomisi {
   id               String   @id @default(cuid())
   kategori         String   @unique
   persentase       Float?
-  minTarget        Float?
-  maxTarget        Float?
-  persentaseBonus1 Float?
-  persentaseBonus2 Float?
+  minAchBonusUtama Float?
+  minAchBonusExtra Float?
   dibuatOleh       String?
   dibuatTanggal    DateTime @default(now())
   diubahOleh       String?
