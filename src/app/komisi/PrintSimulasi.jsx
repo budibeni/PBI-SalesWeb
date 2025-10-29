@@ -17,7 +17,7 @@ const nf0 = (n) =>
 // Deteksi tipe target kategori.
 // - Jika ada sufiks "%" → PERCENT
 // - Jika tidak ada tetapi targetGlobal ada → asumsikan persen (komponen TargetKomisi memakai mode persen saat global terisi)
-// - Jika angka murni dan targetGlobal kosong → N0MINAL
+// - Jika angka murni dan targetGlobal kosong → NOMINAL
 function detectTargetType(val, hasGlobal) {
     const s = String(val ?? "").trim()
     if (!s) return hasGlobal ? "PERCENT" : "NOMINAL"
@@ -43,10 +43,38 @@ function formatTargetValue(val, type) {
     return `Rp ${nf(num)}`
 }
 
+// Normalisasi achievementKategori → [{ kategori, achievementPct }]
+function normalizeAchievement(achievementKategori) {
+    const rows = []
+
+    // Bentuk 1: Array of objects: [{ kategori, achievement, ... }]
+    if (Array.isArray(achievementKategori)) {
+        for (const r of achievementKategori) {
+            if (!r || !r.kategori) continue
+            const ach = Number(r.achievement || 0)
+            rows.push({ kategori: r.kategori, achievementPct: ach * 100 })
+        }
+        return rows
+    }
+
+    // Bentuk 2: Object map: { [kategori]: achievement }
+    if (achievementKategori && typeof achievementKategori === "object") {
+        for (const [kat, v] of Object.entries(achievementKategori)) {
+            const ach = Number(v || 0)
+            rows.push({ kategori: kat, achievementPct: ach * 100 })
+        }
+    }
+
+    return rows
+}
+
 const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
     if (!data) return null
     const rows = Array.isArray(data.rowsItem) ? data.rowsItem : []
     const hasGlobal = Number(data.targetGlobal || 0) > 0
+
+    // Normalisasi achievement
+    const achRows = normalizeAchievement(data.achievementKategori)
 
     return (
         <div
@@ -65,6 +93,7 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
 
             {/* TARGET & ACHIEVEMENT */}
             <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* Target */}
                 <div>
                     <h2 className="font-semibold mb-1">Target Komisi</h2>
                     <table className="w-full border text-sm">
@@ -84,7 +113,6 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
                             </tr>
                         )}
 
-
                         {Object.entries(data.targetKategori || {}).map(([kat, raw]) => {
                             const type = detectTargetType(raw, hasGlobal)
                             const shown = formatTargetValue(raw, type)
@@ -99,6 +127,7 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
                     </table>
                 </div>
 
+                {/* Achievement */}
                 <div>
                     <h2 className="font-semibold mb-1">Achievement (%)</h2>
                     <table className="w-full border text-sm">
@@ -109,13 +138,14 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
                         </tr>
                         </thead>
                         <tbody>
-                        {Object.entries(data.achievementKategori || {}).map(([k, v]) => (
-                            <tr key={k} className="border-b">
-                                <td className="px-2 py-1">{k}</td>
-                                <td className="px-2 py-1 text-right">{(Number(v || 0) * 100).toFixed(2)}%</td>
+                        {achRows.map((r) => (
+                            <tr key={r.kategori} className="border-b">
+                                <td className="px-2 py-1">{r.kategori}</td>
+                                <td className="px-2 py-1 text-right">{r.achievementPct.toFixed(2)}%</td>
                             </tr>
                         ))}
-                        {Object.keys(data.achievementKategori || {}).length === 0 && (
+
+                        {achRows.length === 0 && (
                             <tr>
                                 <td colSpan={2} className="border px-2 py-2 text-center text-gray-500">
                                     Tidak ada data achievement.
@@ -183,7 +213,7 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
                     <td className="border px-2 py-1 text-right">Rp {nf(data.komisiDasarTotal)}</td>
                 </tr>
                 <tr>
-                    <td className="border px-2 py-1">Bonus Utama (10%)</td>
+                    <td className="border px-2 py-1">Bonus Utama</td>
                     <td className="border px-2 py-1 text-right">Rp {nf(data.bonusUtamaTotal)}</td>
                 </tr>
                 <tr>
