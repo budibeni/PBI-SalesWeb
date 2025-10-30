@@ -24,47 +24,71 @@ const PUBLIC_PATHS = [
     "/images",
 ]
 
-// gabungkan public dinamis (ACCESS_ITEMS.public) + daftar statis
+// === Utils ===
 function isPublicPath(pathname) {
     if (isPublicByAccessItems(pathname)) return true
     return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
 }
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET)
+// Normalisasi flag aktif: dukung 1/0, "1"/"0", "true"/"false", boolean
+function asBool(v) {
+    if (typeof v === "boolean") return v
+    if (typeof v === "number") return v === 1
+    if (typeof v === "string") {
+        const s = v.trim().toLowerCase()
+        return s === "1" || s === "true"
+    }
+    return false
+}
 
 // redirect helper + clear cookie bila perlu
 function redirectToLogin(req, pathname, search, message) {
     const url = new URL(LOGIN, req.url)
     url.searchParams.set("redirect", pathname + search)
-    if (message) url.searchParams.set("error", message) // JANGAN pre-encode; biar URLSearchParams yang encode
+    if (message) url.searchParams.set("error", message) // biar URLSearchParams yang encode
     const res = NextResponse.redirect(url)
     // hapus session cookie
     res.cookies.set("session", "", { path: "/", expires: new Date(0) })
     return res
 }
 
-// fetch profil terkini (dipakai cek aktif real-time)
-async function resolveMe(req) {
-    const res = await fetch(new URL("/api/me", req.url), {
-        headers: { cookie: req.headers.get("cookie") || "", "cache-control": "no-store" },
-    }).catch(() => null)
-    if (!res || !res.ok) return null
-    return await res.json().catch(() => null)
+// fetch profil terkini (dipakai cek aktif real-time) — soft, ada timeout
+async function resolveMeSafe(req, timeoutMs = 1000) {
+    try {
+        const ctrl = new AbortController()
+        const t = setTimeout(() => ctrl.abort(), timeoutMs)
+        const res = await fetch(new URL("/api/me", req.url), {
+            headers: { cookie: req.headers.get("cookie") || "", "cache-control": "no-store" },
+            signal: ctrl.signal,
+        }).catch(() => null)
+        clearTimeout(t)
+        if (!res || !res.ok) return undefined // UNKNOWN → jangan dianggap non-aktif
+        const data = await res.json().catch(() => undefined)
+        return data // { akun, aktif, akses?, ... } | undefined
+    } catch {
+        return undefined // UNKNOWN
+    }
 }
 
 // ambil akses dari me/payload bila ada
 async function resolveAkses(req, payload, me) {
     if (me && typeof me.akses === "object") return me.akses
     if (payload?.akses && typeof payload.akses === "object") return payload.akses
-    const res = await fetch(new URL("/api/me", req.url), {
-        headers: { cookie: req.headers.get("cookie") || "", "cache-control": "no-store" },
-    }).catch(() => null)
-    if (res && res.ok) {
-        const data = await res.json().catch(() => ({}))
-        if (data && typeof data.akses === "object") return data.akses
-    }
+    // fallback coba panggil /api/me lagi (boleh gagal; ini tidak memblokir)
+    try {
+        const res = await fetch(new URL("/api/me", req.url), {
+            headers: { cookie: req.headers.get("cookie") || "", "cache-control": "no-store" },
+        }).catch(() => null)
+        if (res && res.ok) {
+            const data = await res.json().catch(() => ({}))
+            if (data && typeof data.akses === "object") return data.akses
+        }
+    } catch {}
     return {}
 }
+
+const rawSecret = process.env.JWT_SECRET || ""
+const secret = rawSecret ? new TextEncoder().encode(rawSecret) : null
 
 export async function middleware(req) {
     const { pathname, search } = req.nextUrl
@@ -73,11 +97,13 @@ export async function middleware(req) {
     // 0) Public path → bebas
     if (isPublicPath(pathname)) {
         // khusus /login: bila ada token valid & bukan non-aktif → langsung ke home
-        if (pathname.startsWith("/login") && token) {
+        if (pathname.startsWith("/login") && token && secret) {
             try {
                 const { payload: p } = await jwtVerify(token, secret)
-                const isBypass = p?.akun?.toLowerCase() === SUPER_ACCOUNT
-                if (p?.aktif === false && !isBypass) {
+                const akun = (p?.akun || "").toLowerCase()
+                const isBypass = akun === SUPER_ACCOUNT
+                const aktifFromToken = asBool(p?.aktif)
+                if (!aktifFromToken && !isBypass) {
                     // token valid tapi non-aktif → jangan redirect; clear cookie & biarkan tetap di /login
                     const res = NextResponse.next()
                     res.cookies.set("session", "", { path: "/", expires: new Date(0) })
@@ -96,6 +122,12 @@ export async function middleware(req) {
         return redirectToLogin(req, pathname, search)
     }
 
+    // Jika secret tidak ada di env (kasus salah konfigurasi production)
+    if (!secret) {
+        // anggap tidak login supaya jelas
+        return redirectToLogin(req, pathname, search)
+    }
+
     // 2) Verifikasi JWT
     let payload = null
     try {
@@ -105,23 +137,30 @@ export async function middleware(req) {
         return redirectToLogin(req, pathname, search)
     }
 
-    // 3) Blokir akun non-aktif (kecuali SUPER_ACCOUNT)
-    const isBypass = payload?.akun?.toLowerCase() === SUPER_ACCOUNT
-    if (!isBypass && payload?.aktif === false) {
+    // 3) Blokir akun non-aktif (kecuali SUPER_ACCOUNT) — berdasarkan TOKEN
+    const akun = (payload?.akun || "").toLowerCase()
+    const isBypass = akun === SUPER_ACCOUNT
+    const aktifFromToken = asBool(payload?.aktif)
+    if (!isBypass && !aktifFromToken) {
         return redirectToLogin(req, pathname, search, "Akun dinonaktifkan")
     }
 
-    // cek status real-time (jika dinonaktifkan setelah login)
-    const me = await resolveMe(req)
-    const isBypassRt = isBypass || (me?.akun?.toLowerCase() === SUPER_ACCOUNT)
-    if (!isBypassRt && (!me || me.aktif === false)) {
+    // 3b) Cek status real-time (soft check)
+    // Jika panggilan /api/me berhasil dan PASTI non-aktif → blokir.
+    // Jika gagal/timeout (undefined), jangan blokir.
+    const me = await resolveMeSafe(req)
+    const isBypassRt = isBypass || ((me?.akun || "").toLowerCase() === SUPER_ACCOUNT)
+    const aktifFromMe = me?.aktif !== undefined ? asBool(me.aktif) : undefined
+    if (!isBypassRt && aktifFromMe === false) {
         return redirectToLogin(req, pathname, search, "Akun dinonaktifkan")
     }
 
     // 4) Cek akses untuk route protected
     const accessId = getAccessIdByPath(pathname)
-    if (!accessId) return NextResponse.next()       // route tidak dipetakan → cukup login
-    if (payload?.role === "admin") return NextResponse.next() // admin bebas
+    if (!accessId) return NextResponse.next()                  // route tidak dipetakan → cukup login
+    if ((payload?.role || "").toLowerCase() === "admin") {
+        return NextResponse.next()                               // admin bebas
+    }
 
     const akses = await resolveAkses(req, payload, me)
     if (!akses?.[accessId]) {
