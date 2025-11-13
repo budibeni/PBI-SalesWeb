@@ -25,7 +25,7 @@ export default async function UsersPage() {
     })
 
     return (
-        <main className="p-6">
+        <main className="p-1">
             <UsersManager initialUsers={users} />
         </main>
     )

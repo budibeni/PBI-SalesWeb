@@ -24,7 +24,7 @@ export default async function ArtikelPage() {
     })
 
     return (
-        <main className="p-1 sm:p-6">
+        <main className="p-1">
             <ArticlesManager initialArticles={rows} />
         </main>
     )

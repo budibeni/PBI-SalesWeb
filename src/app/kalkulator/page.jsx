@@ -67,7 +67,7 @@ export default function KalkulatorPage() {
             if (r.mode === MODE.JUMLAH_ITEM) {
                 hasilNum = jumlah * (nilaiPenggunaan || 0)
             } else {
-                hasilNum = jumlah > 0 ? (nilaiPenggunaan || 0) / jumlah : 0
+                hasilNum = jumlah > 0 ? jumlah / (nilaiPenggunaan || 0) : 0
             }
 
             const unit =

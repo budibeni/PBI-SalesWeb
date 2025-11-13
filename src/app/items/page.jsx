@@ -150,25 +150,27 @@ export default function ItemsPage() {
     }
 
     return (
-        <div className="p-4">
+        <div>
             <Card className="mx-auto max-w-6xl">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardHeader className="flex sm:flex-row flex-col items-center justify-between space-y-0">
                     <CardTitle className="text-xl">Master Item</CardTitle>
-                    <div className="flex items-center gap-2">
-                        {/* ➕ Bulk Edit Harga/HPP */}
-                        <BulkHargaDialog
-                            disabled={selected.size === 0}
-                            count={selected.size}
-                            ids={[...selected]}
-                            onDone={async () => { await load() }}
-                        />
-                        {/* Bulk Edit Kalkulator (sudah ada) */}
-                        <BulkCalcDialog
-                            disabled={selected.size === 0}
-                            count={selected.size}
-                            ids={[...selected]}
-                            onDone={async () => { await load() }}
-                        />
+                    <div className="flex sm:flex-row flex-col items-center gap-2">
+                        <div className="flex items-center gap-2">
+                            {/* ➕ Bulk Edit Harga/HPP */}
+                            <BulkHargaDialog
+                                disabled={selected.size === 0}
+                                count={selected.size}
+                                ids={[...selected]}
+                                onDone={async () => { await load() }}
+                            />
+                            {/* Bulk Edit Kalkulator (sudah ada) */}
+                            <BulkCalcDialog
+                                disabled={selected.size === 0}
+                                count={selected.size}
+                                ids={[...selected]}
+                                onDone={async () => { await load() }}
+                            />
+                        </div>
                         <Button asChild>
                             <Link href="/items/new"><Plus className="mr-2 h-4 w-4" />Tambah</Link>
                         </Button>
@@ -220,7 +222,7 @@ export default function ItemsPage() {
                             </SelectContent>
                         </Select>
 
-                        <Button type="submit" className="sm:hidden">Terapkan</Button>
+                        {/*<Button type="submit" className="sm:hidden">Terapkan</Button>*/}
                     </form>
 
                     {/* Summary */}
