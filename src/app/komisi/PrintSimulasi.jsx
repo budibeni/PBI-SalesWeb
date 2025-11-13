@@ -1,6 +1,7 @@
 "use client"
 
 import React, { forwardRef } from "react"
+import {calcSubtotal} from "@/app/komisi/logic/TableProduk/subtotal";
 
 const nf = (n) =>
     Number(n || 0).toLocaleString("id-ID", {
@@ -91,50 +92,96 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
                 </div>
             </div>
 
-            {/* TARGET & ACHIEVEMENT */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-                {/* Target */}
-                <div>
-                    <h2 className="font-semibold mb-1">Target Komisi</h2>
-                    <table className="w-full border text-sm">
-                        <thead className="bg-gray-50">
-                        <tr>
-                            <th className="border px-2 py-1 text-left">Kategori</th>
-                            <th className="border px-2 py-1 text-right">Nilai</th>
+            {/* TARGET*/}
+            <div className="mb-4">
+                <h2 className="font-semibold mb-1"># Target Komisi</h2>
+                <table className="w-full border text-sm">
+                    <thead className="bg-gray-50">
+                    <tr>
+                        <th className="border px-2 py-1 text-left">Kategori</th>
+                        <th className="border px-2 py-1 text-right">Nilai (Rp.)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {data.targetGlobal > 0 && (
+                        <tr className="border-b">
+                            <td className="px-2 py-1 font-medium">Total Target</td>
+                            <td className="px-2 py-1 text-right">
+                                {data.targetGlobal ? `Rp ${nf(data.targetGlobal)}` : "-"}
+                            </td>
                         </tr>
-                        </thead>
-                        <tbody>
-                        {data.targetGlobal > 0 && (
-                            <tr className="border-b">
-                                <td className="px-2 py-1 font-medium">Total Target</td>
-                                <td className="px-2 py-1 text-right">
-                                    {data.targetGlobal ? `Rp ${nf(data.targetGlobal)}` : "-"}
-                                </td>
+                    )}
+
+                    {Object.entries(data.targetKategori || {}).map(([kat, raw]) => {
+                        const type = detectTargetType(raw, hasGlobal)
+                        const shown = formatTargetValue(raw, type)
+                        return (
+                            <tr key={kat} className="border-b">
+                                <td className="px-2 py-1">{kat}</td>
+                                <td className="px-2 py-1 text-right">{shown}</td>
                             </tr>
-                        )}
+                        )
+                    })}
+                    </tbody>
+                </table>
+            </div>
 
-                        {Object.entries(data.targetKategori || {}).map(([kat, raw]) => {
-                            const type = detectTargetType(raw, hasGlobal)
-                            const shown = formatTargetValue(raw, type)
-                            return (
-                                <tr key={kat} className="border-b">
-                                    <td className="px-2 py-1">{kat}</td>
-                                    <td className="px-2 py-1 text-right">{shown}</td>
-                                </tr>
-                            )
-                        })}
-                        </tbody>
-                    </table>
-                </div>
+            {/* TABEL PRODUK */}
+            <h2 className="font-semibold mb-1"># Detail Produk</h2>
+            <table className="w-full border-collapse border text-sm mb-6">
+                <thead className="bg-gray-100">
+                <tr>
+                    <th className="border px-2 py-1 text-left">#</th>
+                    <th className="border px-2 py-1 text-left">Kode Item</th>
+                    <th className="border px-2 py-1 text-left">Kategori</th>
+                    <th className="border px-2 py-1 text-right">Harga</th>
+                    <th className="border px-2 py-1 text-right">Qty</th>
+                    <th className="border px-2 py-1 text-right">Satuan</th>
+                    <th className="border px-2 py-1 text-right">Potensi Komisi</th>
+                </tr>
+                </thead>
+                <tbody>
+                {rows.map((r, i) => {
+                    const kodeItem = r.kodeItem ?? "-"
+                    const namaItem = r.namaItem ?? "-"
+                    const satuan = r.satuan ?? "-"
+                    const kategori = r.kategori ?? "-"
+                    const harga = Number(r.harga || 0)
+                    const qty = Number(r.qty || 0)
+                    const subtotal = calcSubtotal(r)
+                    return (
+                        <tr key={r.id || i}>
+                            <td className="border px-2 py-1 text-center">{i + 1}</td>
+                            <td className="border px-2 py-1">{kodeItem}</td>
+                            <td className="border px-2 py-1">{kategori}</td>
+                            <td className="border px-2 py-1 text-right">Rp {nf(harga)}</td>
+                            <td className="border px-2 py-1 text-right">{nf(qty)}</td>
+                            <td className="border px-2 py-1">{satuan}</td>
+                            <td className="border px-2 py-1 text-right">Rp {nf(subtotal)}</td>
+                        </tr>
+                    )
+                })}
 
-                {/* Achievement */}
+                {rows.length === 0 && (
+                    <tr>
+                        <td colSpan={8} className="border px-2 py-2 text-center text-gray-500">
+                            Tidak ada item.
+                        </td>
+                    </tr>
+                )}
+                </tbody>
+            </table>
+
+            <h2 className="font-semibold mb-1"># Achievement & Komisi</h2>
+            <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
-                    <h2 className="font-semibold mb-1">Achievement (%)</h2>
+                    {/* Achievement */}
+                    {/*<h2 className="font-semibold mb-1">Achievement (%)</h2>*/}
                     <table className="w-full border text-sm">
                         <thead className="bg-gray-50">
                         <tr>
                             <th className="border px-2 py-1 text-left">Kategori</th>
-                            <th className="border px-2 py-1 text-right">Pencapaian</th>
+                            <th className="border px-2 py-1 text-right">Achievement (%)</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -155,79 +202,40 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
                         </tbody>
                     </table>
                 </div>
+                <div>
+                    {/* RINGKASAN KOMISI */}
+                    {/*<h2 className="font-semibold mb-1">Rincian Komisi</h2>*/}
+                    <table className="w-full border text-sm">
+                        <thead className="bg-gray-50">
+                        <tr>
+                            <th className="border px-2 py-1 text-left" colSpan={2}>Keterangan</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td className="border px-2 py-1">Komisi Dasar Total</td>
+                            <td className="border px-2 py-1 text-right">Rp {nf(data.komisiDasarTotal)}</td>
+                        </tr>
+                        <tr>
+                            <td className="border px-2 py-1">Bonus Utama</td>
+                            <td className="border px-2 py-1 text-right">Rp {nf(data.bonusUtamaTotal)}</td>
+                        </tr>
+                        <tr>
+                            <td className="border px-2 py-1">Bonus Extra</td>
+                            <td className="border px-2 py-1 text-right">Rp {nf(data.bonusExtraTotal)}</td>
+                        </tr>
+                        <tr className="bg-gray-100 font-semibold">
+                            <td className="border px-2 py-1">Total </td>
+                            <td className="border px-2 py-1 text-right text-blue-600">
+                                Rp {nf(data.subtotalTotal)}
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {/* TABEL PRODUK */}
-            <h2 className="font-semibold mb-1">Detail Produk</h2>
-            <table className="w-full border-collapse border text-sm mb-6">
-                <thead className="bg-gray-100">
-                <tr>
-                    <th className="border px-2 py-1 text-left">#</th>
-                    <th className="border px-2 py-1 text-left">Kode Item</th>
-                    <th className="border px-2 py-1 text-left">Kategori</th>
-                    <th className="border px-2 py-1 text-right">Harga</th>
-                    <th className="border px-2 py-1 text-right">Qty</th>
-                    <th className="border px-2 py-1 text-right">Satuan</th>
-                    <th className="border px-2 py-1 text-right">Komisi</th>
-                </tr>
-                </thead>
-                <tbody>
-                {rows.map((r, i) => {
-                    const kodeItem = r.kodeItem ?? "-"
-                    const namaItem = r.namaItem ?? "-"
-                    const satuan = r.satuan ?? "-"
-                    const kategori = r.kategori ?? "-"
-                    const harga = Number(r.harga || 0)
-                    const qty = Number(r.qty || 0)
-                    const persen = Number(r.persen || 0)
-                    const sub = harga * qty * persen
-                    return (
-                        <tr key={r.id || i}>
-                            <td className="border px-2 py-1 text-center">{i + 1}</td>
-                            <td className="border px-2 py-1">{kodeItem}</td>
-                            <td className="border px-2 py-1">{kategori}</td>
-                            <td className="border px-2 py-1 text-right">Rp {nf(harga)}</td>
-                            <td className="border px-2 py-1 text-right">{nf(qty)}</td>
-                            <td className="border px-2 py-1">{satuan}</td>
-                            <td className="border px-2 py-1 text-right">Rp {nf(sub)}</td>
-                        </tr>
-                    )
-                })}
 
-                {rows.length === 0 && (
-                    <tr>
-                        <td colSpan={8} className="border px-2 py-2 text-center text-gray-500">
-                            Tidak ada item.
-                        </td>
-                    </tr>
-                )}
-                </tbody>
-            </table>
-
-            {/* RINGKASAN KOMISI */}
-            <h2 className="font-semibold mb-1">Rincian Komisi</h2>
-            <table className="w-full border text-sm">
-                <tbody>
-                <tr>
-                    <td className="border px-2 py-1">Komisi Dasar Total</td>
-                    <td className="border px-2 py-1 text-right">Rp {nf(data.komisiDasarTotal)}</td>
-                </tr>
-                <tr>
-                    <td className="border px-2 py-1">Bonus Utama</td>
-                    <td className="border px-2 py-1 text-right">Rp {nf(data.bonusUtamaTotal)}</td>
-                </tr>
-                <tr>
-                    <td className="border px-2 py-1">Bonus Extra</td>
-                    <td className="border px-2 py-1 text-right">Rp {nf(data.bonusExtraTotal)}</td>
-                </tr>
-                <tr className="bg-gray-100 font-semibold">
-                    <td className="border px-2 py-2">Total Keseluruhan</td>
-                    <td className="border px-2 py-2 text-right text-blue-600">
-                        Rp {nf(data.subtotalTotal)}
-                    </td>
-                </tr>
-                </tbody>
-            </table>
 
             {/* FOOTER */}
             <div className="mt-8 text-xs text-gray-500 text-center">

@@ -305,7 +305,7 @@ export default function TableProduk({
                                     <TableHead className="w-28 text-right">MSRP</TableHead>
                                     <TableHead className="w-36 text-right">Harga</TableHead>
                                     <TableHead className="w-28 text-right">Qty</TableHead>
-                                    <TableHead className="w-40 text-right">Subtotal</TableHead>
+                                    <TableHead className="w-40 text-right">Potensi Komisi</TableHead>
                                     <TableHead className="w-10" />
                                 </TableRow>
                             </TableHeader>

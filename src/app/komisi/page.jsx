@@ -139,6 +139,7 @@ export default function Page() {
                     namaItem: r.namaItem ?? it.namaItem ?? "",
                     kategori: r.kategori ?? it.kategori ?? "",
                     satuan: r.satuan ?? it.satuan ?? "",
+                    hpp: Number(r.hpp || 0),
                     msrp: Number((r.msrp ?? it.msrp ?? it.harga) || 0),
                     harga: Number(r.harga || 0),
                     qty: Number(r.qty || 0),
