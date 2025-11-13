@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Copy, Check } from "lucide-react"
 
@@ -86,8 +86,9 @@ export default function CopyButton({
             title={title ?? (copied ? successLabel : label)}
             aria-live="polite"
         >
-            {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-            {children ?? (copied ? successLabel : label)}
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            <span className="hidden sm:inline"> {children ?? (copied ? successLabel : label)}</span>
+
             {/* sr-only untuk screen reader saat status berubah */}
             <span className="sr-only">{copied ? successLabel : ""}</span>
         </Button>
