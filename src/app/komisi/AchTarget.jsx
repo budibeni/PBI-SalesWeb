@@ -43,6 +43,7 @@ export default function AchTarget({ show, onComputed, valueRows = [] }) {
                 const achievement = Number.isFinite(num) ? num / 100 : 0
                 return {
                     kategori: kat,
+                    persentase: it.persentase ?? null,
                     minAchKomisiDasar: it.minAchKomisiDasar ?? null,
                     minBonusUtama: it.minAchBonusUtama ?? null,
                     valueBonusUtama: it.valueBonusUtama ?? null,

@@ -8,15 +8,17 @@ const nf = (n) =>
     Number(n || 0).toLocaleString("id-ID", { maximumFractionDigits: 2 });
 
 export default function FooterPage({
-                                       komisiKategori = 0,
+                                       marginKategori = 0,
                                        achvmentRows = [],
                                        onSummaryChange,
                                    }) {
-    // Normalisasi input komisi per kategori
+    console.info("marginKategori", marginKategori);
+
+    // Normalisasi input margin per kategori (dari parent)
     const perKategori =
-        (typeof komisiKategori === "object" &&
-            komisiKategori !== null &&
-            komisiKategori.perKategori) ||
+        (typeof marginKategori === "object" &&
+            marginKategori !== null &&
+            marginKategori.perKategori) ||
         {};
 
     // Buat lookup dari AchRow[], lengkap dengan default aman
@@ -26,81 +28,154 @@ export default function FooterPage({
             if (!r?.kategori) continue;
             m.set(r.kategori, {
                 achievement: Number(r.achievement) || 0,
+                persentase:
+                    r.persentase == null ? 0 : Number(r.persentase) || 0,
                 minAchKomisiDasar:
-                    r.minAchKomisiDasar == null ? 0 : Number(r.minAchKomisiDasar) || 0,
+                    r.minAchKomisiDasar == null
+                        ? 0
+                        : Number(r.minAchKomisiDasar) || 0,
                 minBonusUtama:
                     r.minBonusUtama == null ? 0 : Number(r.minBonusUtama) || 0,
                 valueBonusUtama:
-                    r.valueBonusUtama == null ? 0 : Number(r.valueBonusUtama) || 0,
+                    r.valueBonusUtama == null
+                        ? 0
+                        : Number(r.valueBonusUtama) || 0,
                 minBonusExtra:
-                    r.minBonusExtra == null ? 1.0 : Number(r.minBonusExtra) || 0,
+                    r.minBonusExtra == null
+                        ? 1.0
+                        : Number(r.minBonusExtra) || 0,
                 valueBonusExtra:
-                    r.valueBonusExtra == null ? 0 : Number(r.valueBonusExtra) || 0,
+                    r.valueBonusExtra == null
+                        ? 0
+                        : Number(r.valueBonusExtra) || 0,
             });
         }
         return m;
     }, [achvmentRows]);
 
-    // 1) Komisi Dasar per Kategori (hanya jika achievement >= minAchKomisiDasar)
+    /**
+     * 1) Komisi Dasar per Kategori (totalDasar)
+     *
+     * Jika Achievement ≤ minAchKomisiDasar:
+     *      Komisi Dasar = 0
+     *
+     * Jika minAchKomisiDasar < Achievement ≤ 1:
+     *      Komisi Dasar = persentase × Achievement × Margin
+     *
+     * Jika Achievement > 1:
+     *      Komisi Dasar = persentase × Margin ÷ Achievement
+     *
+     * Catatan:
+     * - "Margin" di sini adalah margin per kategori (perKategori[k]).
+     * - Komisi Dasar disimpan di dasarMap[k].
+     */
     const { dasarMap, totalDasar } = React.useMemo(() => {
         const m = {};
         let sum = 0;
-        for (const [k, dasarVal] of Object.entries(perKategori)) {
-            const dasar = Number(dasarVal) || 0;
+
+        for (const [k, marginVal] of Object.entries(perKategori)) {
+            const margin = Number(marginVal) || 0;
+
             const a = achMap.get(k);
-            const ach = a?.achievement ?? 0;
+            const ach = a?.achievement ?? 0; // diasumsikan 0–1 (misal 0.7, 1.0, 1.1)
             const minAch = a?.minAchKomisiDasar ?? 0;
-            const value = ach >= minAch ? dasar : 0;
+            const pers = a?.persentase ?? 0;
+
+            let value = 0;
+
+            if (ach > minAch) {
+                if (ach <= 1) {
+                    // minAchKomisiDasar < Achievement ≤ 1
+                    value = pers * ach * margin;
+                } else {
+                    // Achievement > 1
+                    value = ach !== 0 ? pers * (margin / ach) : 0;
+                }
+            } else {
+                // Achievement ≤ minAchKomisiDasar → 0
+                value = 0;
+            }
 
             m[k] = value;
             sum += value;
         }
+
         return { dasarMap: m, totalDasar: sum };
     }, [perKategori, achMap]);
 
-    // 2) Bonus Utama per Kategori (jika achievement >= minBonusUtama)
-    //    Rumus: komisiDasarPerKategori * valueBonusUtama
+    /**
+     * 2) Bonus Utama per Kategori
+     *
+     * Jika Achievement < minBonusUtama:
+     *      Bonus Utama = 0
+     *
+     * Jika Achievement ≥ minBonusUtama:
+     *      Bonus Utama = valueBonusUtama × Komisi Dasar
+     *
+     * Komisi Dasar per kategori = dasarMap[k]
+     */
     const { bonusUtamaMap, bonusUtama } = React.useMemo(() => {
         const m = {};
         let sum = 0;
+
         for (const k of Object.keys(perKategori)) {
-            const dasarK = Number(dasarMap[k]) || 0; // sudah ter-filter dari poin 1
+            const dasarK = Number(dasarMap[k]) || 0; // Komisi Dasar per kategori
             const a = achMap.get(k);
             const ach = a?.achievement ?? 0;
             const minUtama = a?.minBonusUtama ?? 0;
             const valUtama = a?.valueBonusUtama ?? 0;
 
-            const v = ach >= minUtama ? dasarK * valUtama : 0;
+            const v = ach >= minUtama ? valUtama * dasarK : 0;
             m[k] = v;
             sum += v;
         }
+
         return { bonusUtamaMap: m, bonusUtama: sum };
     }, [perKategori, achMap, dasarMap]);
 
-    // 3) Bonus Extra per Kategori (jika achievement >= minBonusExtra)
-    //    Rumus: (achievement * komisiDasarPerKategori * valueBonusExtra) - (komisiDasarPerKategori + bonusUtamaPerKategori)
+    /**
+     * BONUS EXTRA PER KATEGORI
+     *
+     * Ketentuan:
+     * - dihitung hanya jika achievement > minBonusExtra
+     * - menggunakan margin kategori sebagai basis
+     * - formula:
+     *      bonusExtra =
+     *          valueBonusExtra × persentase × (margin − (margin ÷ achievement)) × achievement
+     *
+     * Keterangan input:
+     * - achievement harus sudah dalam bentuk desimal (1.2 = 120%)
+     * - persentase juga desimal (0.0044 = 0,44%)
+     */
     const { bonusExtraMap, bonusExtra } = React.useMemo(() => {
         const m = {};
         let sum = 0;
-        for (const k of Object.keys(perKategori)) {
-            const dasarK = Number(dasarMap[k]) || 0;
-            const utamaK = Number(bonusUtamaMap[k]) || 0;
+
+        for (const [k, marginVal] of Object.entries(perKategori)) {
+            const marginK = Number(marginVal) || 0;
 
             const a = achMap.get(k);
             const ach = a?.achievement ?? 0;
             const minExtra = a?.minBonusExtra ?? 1.0;
+            const pers = a?.persentase ?? 0;
             const valExtra = a?.valueBonusExtra ?? 0;
 
-            const eligible = ach >= minExtra;
-            const extraK = eligible
-                ? ach * dasarK * valExtra - (dasarK + utamaK)
-                : 0;
+            let v = 0;
 
-            m[k] = extraK;
-            sum += extraK;
+            if (ach > minExtra && marginK > 0 && pers !== 0 && valExtra !== 0) {
+                const deltaMargin = marginK - (marginK / ach);
+                v = valExtra * pers * deltaMargin * ach;
+            } else {
+                v = 0;
+            }
+
+            m[k] = v;
+            sum += v;
         }
+
         return { bonusExtraMap: m, bonusExtra: sum };
-    }, [perKategori, achMap, dasarMap, bonusUtamaMap]);
+    }, [perKategori, achMap]);
+
 
     const total = totalDasar + bonusUtama + bonusExtra;
 
@@ -152,7 +227,9 @@ export default function FooterPage({
                     <StatCard
                         icon={<GiftIcon className="h-4 w-4" />}
                         label="Bonus Extra"
-                        value={`${bonusExtra >= 0 ? "+" : ""}Rp. ${nf(bonusExtra)}`}
+                        value={`${bonusExtra >= 0 ? "+" : ""}Rp. ${nf(
+                            bonusExtra
+                        )}`}
                         tone="green"
                     />
                     <StatCard
@@ -213,7 +290,7 @@ function StatCard({ icon, label, value, tone = "gray", emphasize = false }) {
                     className={cn(
                         "font-semibold text-right tracking-tight tabular-nums",
                         tones.value,
-                        emphasize ? "text-sm sm:text-base" : "text-[13px] sm:text-sm"
+                        emphasize ? "text-sm sm:text;base" : "text-[13px] sm:text-sm"
                     )}
                 >
                     {value}

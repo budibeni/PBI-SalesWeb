@@ -1,7 +1,7 @@
 "use client"
 
 import React, { forwardRef } from "react"
-import {calcSubtotal} from "@/app/komisi/logic/TableProduk/subtotal";
+import {calcPotensiKomisi} from "@/app/komisi/logic/TableProduk/subtotal";
 
 const nf = (n) =>
     Number(n || 0).toLocaleString("id-ID", {
@@ -148,7 +148,7 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
                     const kategori = r.kategori ?? "-"
                     const harga = Number(r.harga || 0)
                     const qty = Number(r.qty || 0)
-                    const subtotal = calcSubtotal(r)
+                    const subtotal = calcPotensiKomisi(r)
                     return (
                         <tr key={r.id || i}>
                             <td className="border px-2 py-1 text-center">{i + 1}</td>

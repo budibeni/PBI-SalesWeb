@@ -7,7 +7,7 @@
  */
 import { asNum, ROUND2 } from "./math.js";
 
-export const calcSubtotal = (row) => {
+export const calcPotensiKomisi = (row) => {
     const harga  = asNum(row.harga);
     const hpp    = asNum(row.hpp);
     const qty    = asNum(row.qty);
@@ -17,6 +17,12 @@ export const calcSubtotal = (row) => {
     return ROUND2(margin * qty * persen);
 };
 
-/* --------- Contoh ----------
-calcSubtotal({harga: 50, hpp: 40, qty: 10, persen: 0.1}) -> 10.00
-------------------------------*/
+
+export const calcMargin = (row) => {
+    const harga  = asNum(row.harga);
+    const hpp    = asNum(row.hpp);
+    const qty    = asNum(row.qty);
+    if (!hpp || hpp <= 0) return 0;
+    const margin = Math.max(0, harga - hpp);
+    return ROUND2(margin * qty);
+};

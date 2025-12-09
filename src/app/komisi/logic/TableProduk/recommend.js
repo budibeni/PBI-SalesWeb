@@ -16,7 +16,7 @@
 
 import { ROUND2, asNum, normPct,  ensureQty } from "./math";
 import { MIN_QTY, MIN_RATIO, clampPrice } from "./rules";
-import { calcSubtotal } from "./subtotal";
+import { calcPotensiKomisi } from "./subtotal";
 
 /** Equal-share per scope */
 export function recommendEqualShare(rows, targetRp) {
@@ -33,7 +33,7 @@ export function recommendEqualShare(rows, targetRp) {
 
     // Fixed (harga&qty locked) tak boleh melebihi target
     const isFixed = (r) => r.hargaLocked && r.qtyLocked;
-    const fixedTotal = ROUND2(clone.filter(isFixed).reduce((s, r) => s + calcSubtotal(r), 0));
+    const fixedTotal = ROUND2(clone.filter(isFixed).reduce((s, r) => s + calcPotensiKomisi(r), 0));
     if (fixedTotal > target + 1e-6) return {};
 
     // Baris yang bisa diubah
@@ -82,7 +82,7 @@ export function recommendEqualShare(rows, targetRp) {
     const MAX_ITER = 6, TOL = 0.5;
     for (let k = 0; k < MAX_ITER; k++) {
         const nowAdj = clone.filter((r) => !isFixed(r));
-        const totals = nowAdj.map((r) => calcSubtotal(r));
+        const totals = nowAdj.map((r) => calcPotensiKomisi(r));
         const totalNow = ROUND2(fixedTotal + totals.reduce((a, b) => a + b, 0));
         const resid = ROUND2(target - totalNow);
         if (Math.abs(resid) <= TOL) break;
@@ -112,10 +112,10 @@ export function capToGlobal(rows, targetGlobal) {
     });
 
     const fixed = ROUND2(clone.filter((r) => r.hargaLocked && r.qtyLocked)
-        .reduce((s, r) => s + calcSubtotal(r), 0));
+        .reduce((s, r) => s + calcPotensiKomisi(r), 0));
     if (fixed > target + 1e-6) return {};
 
-    let total = ROUND2(clone.reduce((s, r) => s + calcSubtotal(r), 0));
+    let total = ROUND2(clone.reduce((s, r) => s + calcPotensiKomisi(r), 0));
     if (total <= target + 1e-6) return {};
 
     let over = ROUND2(total - target);
@@ -149,7 +149,7 @@ export function capToGlobal(rows, targetGlobal) {
                 const dropPerUnit = base > 0 ? ROUND2(dropValue / base) : 0;
                 setHarga(x.r, x.p - dropPerUnit);
             }
-            total = ROUND2(clone.reduce((s, r) => s + calcSubtotal(r), 0));
+            total = ROUND2(clone.reduce((s, r) => s + calcPotensiKomisi(r), 0));
             over = ROUND2(Math.max(0, total - target));
         }
     }

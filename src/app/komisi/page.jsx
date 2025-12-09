@@ -34,7 +34,7 @@ export default function Page() {
     }, [])
 
     const [showAchTarget, setShowAchTarget] = React.useState(false)
-    const [komisiKategori, setKomisiKategori] = React.useState(0)
+    const [marginKategori, setMarginKategori] = React.useState(0)
     const [selectedCat, setSelectedCat] = React.useState(CAT_ALL)
 
     const [summary, setSummary] = React.useState({
@@ -65,7 +65,7 @@ export default function Page() {
         setIdSimulasi(null)
         setJudulSimulasi("")
         setRows([])
-        setKomisiKategori(0)
+        setMarginKategori(0)
         setAchievementRows([])
         setTargetKomisi({ global: "", perKategori: {} })
         setShowAchTarget(false)
@@ -282,7 +282,7 @@ export default function Page() {
                 targetKomisi={targetKomisi}
                 expand={showAchTarget}
                 onExpandChange={setShowAchTarget}
-                onKomisiKategoriChange={setKomisiKategori}
+                onMarginKategoriChange={setMarginKategori}
                 isAdmin={isAdmin}
             />
 
@@ -293,7 +293,7 @@ export default function Page() {
             />
 
             <FooterPage
-                komisiKategori={komisiKategori}
+                marginKategori={marginKategori}
                 achvmentRows={achievementRows}
                 onSummaryChange={setSummary}
             />
