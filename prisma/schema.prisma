@@ -63,7 +63,8 @@ model TbMasterItem {
 
 model TbMasterKomisi {
   id                String   @id @default(cuid())
-  kategori          String   @unique
+  kategori          String // wajib
+  customer          String // wajib
   persentase        Float?
   minAchKomisiDasar Float?
   minAchBonusUtama  Float?
@@ -74,12 +75,15 @@ model TbMasterKomisi {
   dibuatTanggal     DateTime @default(now())
   diubahOleh        String?
   diubahTanggal     DateTime @updatedAt
+
+  @@unique([kategori, customer], name: "uk_TbMasterKomisi_kat_cust")
 }
 
 model TbSimulasiKomisi {
   id                  String   @id @default(cuid())
   judul               String   @default("Simulasi Komisi")
   catatan             String?
+  customer            String?
   targetGlobal        Float? // Target global nominal (Rp)
   targetKategori      Json // { "Bond": "40%", "Shield": "30%" }
   achievementKategori Json // { "Bond": 1.2, "Shield": 0.9 }

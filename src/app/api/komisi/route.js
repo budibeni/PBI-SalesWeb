@@ -26,6 +26,7 @@ export async function GET() {
             select: {
                 id: true,
                 judul: true,
+                customer: true,
                 subtotalTotal: true,
                 komisiDasarTotal: true,
                 bonusUtamaTotal: true,
@@ -57,6 +58,7 @@ export async function POST(req) {
         const created = await prisma.tbSimulasiKomisi.create({
             data: {
                 judul: body.judul ?? "Simulasi Komisi",
+                customer: body.customer ?? null,
                 catatan: body.catatan ?? null,
 
                 targetGlobal: body.targetGlobal ?? null,

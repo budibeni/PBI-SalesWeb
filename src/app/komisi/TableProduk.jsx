@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Lock, Unlock, Grid2X2Check, ChevronUp, ChevronDown } from "lucide-react"
 
-// ⬇️ ganti import lama -> modular
 import { ROUND2, asNum } from "./logic/TableProduk/math"
 import { MIN_QTY, MIN_RATIO, MAX_RATIO } from "./logic/TableProduk/rules"
 import { calcMargin, calcPotensiKomisi } from "./logic/TableProduk/subtotal"
@@ -28,15 +27,16 @@ export default function TableProduk({
                                         onChangeRow,
                                         onRemoveRow,
                                         onPick,
+                                        masterKomisiSelected,
                                         selectedCat,
                                         onChangeCategory,
                                         expand = false,
                                         onExpandChange = () => {},
                                         targetKomisi = null,
-                                        onMarginKategoriChange,   // ⬅️ sebelumnya: onKomisiKategoriChange
+                                        onMarginKategoriChange,
                                         isAdmin = false,
                                     }) {
-    const activeFilter = (selectedCat ?? CAT_ALL)
+    const activeFilter = selectedCat ?? CAT_ALL
     const showHpp = isAdmin === true
 
     const itemById = React.useMemo(() => {
@@ -55,19 +55,58 @@ export default function TableProduk({
         })
     }, [rows, activeFilter, itemById])
 
-    // helper ambil HPP (tetap dipakai untuk kalkulasi)
+    // 🔹 map kategori → persen komisi (desimal 0.1 = 10%)
+    const persenByKategori = React.useMemo(() => {
+        const m = new Map()
+        ;(masterKomisiSelected || []).forEach((row) => {
+            const key = String(row.kategori || "").trim().toLowerCase()
+            m.set(key, Number(row.persentase || 0))
+        })
+        return m
+    }, [masterKomisiSelected])
+
+    // 🔹 setiap kali masterKomisiSelected berubah, update r.persen di rows
+    React.useEffect(() => {
+        if (!onChangeRow) return
+        if (!Array.isArray(rows) || rows.length === 0) return
+
+        const hasMaster = Array.isArray(masterKomisiSelected) && masterKomisiSelected.length > 0
+
+        rows.forEach((r) => {
+            const it = itemById(r.id) || {}
+            const katKey = String(it.kategori || r.kategori || "").trim().toLowerCase()
+
+            let newPersen = 0
+            if (hasMaster) {
+                newPersen = persenByKategori.get(katKey) ?? 0
+            } else {
+                newPersen = 0
+            }
+
+            const curPersen = Number(r.persen || 0)
+            if (curPersen !== newPersen) {
+                onChangeRow(r.id, { persen: newPersen })
+            }
+        })
+    }, [rows, masterKomisiSelected, persenByKategori, itemById, onChangeRow])
+
+    // helper ambil HPP
     const getHppFor = React.useCallback(
         (r) => {
             const it = itemById(r.id) || {}
             return Number(it?.hpp ?? r.hpp ?? 0)
         },
-        [itemById]
+        [itemById],
     )
 
     // Komisi dasar untuk TAMPILAN (hanya baris yang terlihat)
     const totalKomisiKategori = React.useMemo(
-        () => visibleRows.reduce((sum, r) => sum + calcPotensiKomisi({ ...r, hpp: getHppFor(r) }), 0),
-        [visibleRows, getHppFor]
+        () =>
+            visibleRows.reduce(
+                (sum, r) => sum + calcPotensiKomisi({ ...r, hpp: getHppFor(r) }),
+                0,
+            ),
+        [visibleRows, getHppFor],
     )
 
     const applyPatch = React.useCallback(
@@ -79,11 +118,11 @@ export default function TableProduk({
                 if (Object.keys(next).length) onChangeRow?.(id, next)
             })
         },
-        [onChangeRow]
+        [onChangeRow],
     )
 
     const recommend = () => {
-        const cfg = parseTarget(targetKomisi) // ⬅️ parseTarget (was parseTargetKomisiObj)
+        const cfg = parseTarget(targetKomisi)
         if (!cfg || cfg.mode === "NONE") {
             alert("Target komisi belum ditentukan.")
             return
@@ -97,22 +136,23 @@ export default function TableProduk({
         let allPatch = {}
 
         if (cfg.mode === "GLOBAL") {
-            allPatch = { ...allPatch, ...recommendEqualShare(rows, cfg.global) } // ⬅️ equal-share
+            allPatch = { ...allPatch, ...recommendEqualShare(rows, cfg.global) }
         } else if (cfg.mode === "BY_CATEGORY") {
             cfg.perCat.forEach((targetVal, katKey) => {
-                const scope = rows.filter((r) => categoryOf(r) === String(katKey).toLowerCase())
+                const scope = rows.filter(
+                    (r) => categoryOf(r) === String(katKey).toLowerCase(),
+                )
                 if (scope.length === 0) return
-                Object.assign(allPatch, recommendEqualShare(scope, targetVal)) // ⬅️ per kategori
+                Object.assign(allPatch, recommendEqualShare(scope, targetVal))
             })
             if (cfg.global) {
-                // snap hasil patch per kategori, lalu cap ke global
                 const snap = rows.map((r) => {
                     const p = allPatch[r.id]
                     const hargaNum = p?.harga ?? asNum(r.harga)
                     const qtyNum = p?.qty ?? asNum(r.qty)
                     return { ...r, harga: hargaNum, qty: qtyNum }
                 })
-                Object.assign(allPatch, capToGlobal(snap, cfg.global)) // ⬅️ capToGlobal (was enforceGlobalCap)
+                Object.assign(allPatch, capToGlobal(snap, cfg.global))
             }
         }
 
@@ -131,7 +171,7 @@ export default function TableProduk({
         return false
     }, [targetKomisi])
 
-    /* === 🔹 Komisi dasar per-kategori (ALL ROWS) + ringkasan tampilan (UNTUK UI) === */
+    // === Komisi dasar per-kategori untuk summary UI (ALL ROWS) ===
     const perCategoryKomisi = React.useMemo(() => {
         const m = new Map()
         rows.forEach((r) => {
@@ -144,19 +184,22 @@ export default function TableProduk({
         return m
     }, [rows, itemById, getHppFor])
 
-    const komisiSummaryParts = React.useMemo(() => {
-        return Array.from(perCategoryKomisi.entries())
-            .filter(([, v]) => v > 0)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([nama, val]) => `${nama} (Rp. ${fmt(val)})`)
-    }, [perCategoryKomisi])
-
-    const grandTotalKomisi = React.useMemo(
-        () => Array.from(perCategoryKomisi.values()).reduce((a, b) => a + b, 0),
-        [perCategoryKomisi]
+    const komisiSummaryParts = React.useMemo(
+        () =>
+            Array.from(perCategoryKomisi.entries())
+                .filter(([, v]) => v > 0)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([nama, val]) => `${nama} (Rp. ${fmt(val)})`),
+        [perCategoryKomisi],
     )
 
-    /* === 🔹 Margin per-kategori (ALL ROWS) untuk callback onMarginKategoriChange === */
+    const grandTotalKomisi = React.useMemo(
+        () =>
+            Array.from(perCategoryKomisi.values()).reduce((a, b) => a + b, 0),
+        [perCategoryKomisi],
+    )
+
+    // === Margin per-kategori untuk FooterPage ===
     const perCategoryMargin = React.useMemo(() => {
         const m = new Map()
         rows.forEach((r) => {
@@ -170,8 +213,9 @@ export default function TableProduk({
     }, [rows, itemById, getHppFor])
 
     const grandTotalMargin = React.useMemo(
-        () => Array.from(perCategoryMargin.values()).reduce((a, b) => a + b, 0),
-        [perCategoryMargin]
+        () =>
+            Array.from(perCategoryMargin.values()).reduce((a, b) => a + b, 0),
+        [perCategoryMargin],
     )
 
     React.useEffect(() => {
@@ -188,12 +232,19 @@ export default function TableProduk({
         <div className="space-y-4 pt-4">
             {/* ===== MOBILE ===== */}
             <div className="block sm:hidden space-y-3">
-                <SearchItem onPick={onPick} selectedCat={activeFilter} onChangeCategory={onChangeCategory} />
+                <SearchItem
+                    onPick={onPick}
+                    masterKomisiSelected={masterKomisiSelected}
+                    selectedCat={activeFilter}
+                    onChangeCategory={onChangeCategory}
+                />
 
                 {visibleRows.length === 0 ? (
                     <Card>
                         <CardContent className="py-8 text-center text-muted-foreground">
-                            {rows.length === 0 ? "Belum ada item dipilih" : "Tidak ada item pada kategori ini"}
+                            {rows.length === 0
+                                ? "Belum ada item dipilih"
+                                : "Tidak ada item pada kategori ini"}
                         </CardContent>
                     </Card>
                 ) : (
@@ -216,10 +267,16 @@ export default function TableProduk({
                                 <CardContent className="space-y-3">
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <div className={`font-medium ${hpp <= 0 && "line-through"}`}>
+                                            <div
+                                                className={`font-medium ${
+                                                    hpp <= 0 && "line-through"
+                                                }`}
+                                            >
                                                 {it.kodeItem || "-"}
                                             </div>
-                                            <div className="text-xs text-muted-foreground">{it.namaItem || ""}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {it.namaItem || ""}
+                                            </div>
                                         </div>
                                         {it.kategori && (
                                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
@@ -229,7 +286,9 @@ export default function TableProduk({
                                     </div>
 
                                     <div className="flex items-start justify-between text-xs text-muted-foreground">
-                                        <div className="font-medium">MSRP : Rp. {fmt(msrp) || "-"}</div>
+                                        <div className="font-medium">
+                                            MSRP : Rp. {fmt(msrp) || "-"}
+                                        </div>
                                         {showHpp && (
                                             <div className="text-xs text-muted-foreground">
                                                 HPP: Rp {fmt(hpp) || ""}
@@ -240,14 +299,26 @@ export default function TableProduk({
                                     <Separator />
 
                                     <div className="grid grid-cols-12 items-center gap-2">
-                                        <label className="col-span-4 text-sm text-muted-foreground">Harga</label>
+                                        <label className="col-span-4 text-sm text-muted-foreground">
+                                            Harga
+                                        </label>
                                         <div className="col-span-8 flex items-center justify-end gap-2">
                                             <NumericInput
                                                 value={r.harga}
-                                                softMin={hasMsrp ? ROUND2(msrp * MIN_RATIO) : undefined}
-                                                softMax={hasMsrp ? ROUND2(msrp * MAX_RATIO) : undefined}
+                                                softMin={
+                                                    hasMsrp
+                                                        ? ROUND2(msrp * MIN_RATIO)
+                                                        : undefined
+                                                }
+                                                softMax={
+                                                    hasMsrp
+                                                        ? ROUND2(msrp * MAX_RATIO)
+                                                        : undefined
+                                                }
                                                 fixedDecimalScale={false}
-                                                onValue={(val) => onChangeRow?.(r.id, { harga: val })}
+                                                onValue={(val) =>
+                                                    onChangeRow?.(r.id, { harga: val })
+                                                }
                                                 disabled={r.hargaLocked}
                                                 className="text-right w-full"
                                             />
@@ -255,9 +326,17 @@ export default function TableProduk({
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon"
-                                                onClick={() => onChangeRow?.(r.id, { hargaLocked: !r.hargaLocked })}
+                                                onClick={() =>
+                                                    onChangeRow?.(r.id, {
+                                                        hargaLocked: !r.hargaLocked,
+                                                    })
+                                                }
                                                 className="h-8 w-8"
-                                                title={r.hargaLocked ? "Buka kunci harga" : "Kunci harga"}
+                                                title={
+                                                    r.hargaLocked
+                                                        ? "Buka kunci harga"
+                                                        : "Kunci harga"
+                                                }
                                             >
                                                 {r.hargaLocked ? (
                                                     <Lock className="h-4 w-4" />
@@ -269,15 +348,25 @@ export default function TableProduk({
                                     </div>
 
                                     <div className="grid grid-cols-12 items-center gap-2">
-                                        <label className="col-span-4 text-sm text-muted-foreground">Qty</label>
+                                        <label className="col-span-4 text-sm text-muted-foreground">
+                                            Qty
+                                        </label>
                                         <div className="col-span-8 flex items-center justify-end gap-2">
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon"
-                                                onClick={() => onChangeRow?.(r.id, { qtyLocked: !r.qtyLocked })}
+                                                onClick={() =>
+                                                    onChangeRow?.(r.id, {
+                                                        qtyLocked: !r.qtyLocked,
+                                                    })
+                                                }
                                                 className="h-8 w-8 order-2"
-                                                title={r.qtyLocked ? "Buka kunci Qty" : "Kunci Qty"}
+                                                title={
+                                                    r.qtyLocked
+                                                        ? "Buka kunci Qty"
+                                                        : "Kunci Qty"
+                                                }
                                             >
                                                 {r.qtyLocked ? (
                                                     <Lock className="h-4 w-4" />
@@ -291,7 +380,9 @@ export default function TableProduk({
                                                 allowDecimal={!isNotDecimal}
                                                 decimalScale={2}
                                                 fixedDecimalScale={true}
-                                                onValue={(val) => onChangeRow?.(r.id, { qty: val })}
+                                                onValue={(val) =>
+                                                    onChangeRow?.(r.id, { qty: val })
+                                                }
                                                 disabled={r.qtyLocked}
                                                 className="text-right w-full order-1"
                                             />
@@ -301,19 +392,39 @@ export default function TableProduk({
                                     <div className="flex items-center justify-between pt-2">
                                         {showHpp && (
                                             <div className="text-sm">
-                                                <div className="text-[10px] text-muted-foreground">Margin :</div>
-                                                <div className="font-semibold">Rp {fmt(totalMargin)}</div>
+                                                <div className="text-[10px] text-muted-foreground">
+                                                    Margin :
+                                                </div>
+                                                <div className="font-semibold">
+                                                    Rp {fmt(totalMargin)}
+                                                </div>
                                                 <div className="text-[10px] text-muted-foreground mt-1">
-                                                    (Rp. {fmt(qty > 0 ? totalMargin / qty : 0)} / {r.satuan || "-"})
+                                                    (Rp.{" "}
+                                                    {fmt(
+                                                        qty > 0
+                                                            ? totalMargin / qty
+                                                            : 0,
+                                                    )}{" "}
+                                                    / {r.satuan || "-"})
                                                 </div>
                                             </div>
                                         )}
 
                                         <div className="text-sm">
-                                            <div className="text-[10px] text-muted-foreground">Potensi Komisi :</div>
-                                            <div className="font-semibold">Rp {fmt(totalPotensiKomisi)}</div>
+                                            <div className="text-[10px] text-muted-foreground">
+                                                Potensi Komisi :
+                                            </div>
+                                            <div className="font-semibold">
+                                                Rp {fmt(totalPotensiKomisi)}
+                                            </div>
                                             <div className="text-[10px] text-muted-foreground mt-1">
-                                                (Rp. {fmt(qty > 0 ? totalPotensiKomisi / qty : 0)} / {r.satuan || "-"})
+                                                (Rp.{" "}
+                                                {fmt(
+                                                    qty > 0
+                                                        ? totalPotensiKomisi / qty
+                                                        : 0,
+                                                )}{" "}
+                                                / {r.satuan || "-"})
                                             </div>
                                         </div>
                                         <Button
@@ -336,19 +447,40 @@ export default function TableProduk({
             {/* ===== DESKTOP ===== */}
             <Card className="hidden sm:block">
                 <CardContent className="px-6 py-2 space-y-4">
-                    <SearchItem onPick={onPick} selectedCat={activeFilter} onChangeCategory={onChangeCategory} />
+                    <SearchItem
+                        onPick={onPick}
+                        masterKomisiSelected={masterKomisiSelected}
+                        selectedCat={activeFilter}
+                        onChangeCategory={onChangeCategory}
+                    />
 
                     <div className="rounded-md border overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-72">Produk</TableHead>
-                                    {showHpp && <TableHead className="w-28 text-right">HPP</TableHead>}
-                                    <TableHead className="w-28 text-right">MSRP</TableHead>
-                                    <TableHead className="w-36 text-right">Harga</TableHead>
-                                    <TableHead className="w-28 text-right">Qty</TableHead>
-                                    {showHpp && <TableHead className="w-40 text-right">Margin</TableHead>}
-                                    <TableHead className="w-40 text-right">Potensi Komisi</TableHead>
+                                    {showHpp && (
+                                        <TableHead className="w-28 text-right">
+                                            HPP
+                                        </TableHead>
+                                    )}
+                                    <TableHead className="w-28 text-right">
+                                        MSRP
+                                    </TableHead>
+                                    <TableHead className="w-36 text-right">
+                                        Harga
+                                    </TableHead>
+                                    <TableHead className="w-28 text-right">
+                                        Qty
+                                    </TableHead>
+                                    {showHpp && (
+                                        <TableHead className="w-40 text-right">
+                                            Margin
+                                        </TableHead>
+                                    )}
+                                    <TableHead className="w-40 text-right">
+                                        Potensi Komisi
+                                    </TableHead>
                                     <TableHead className="w-10" />
                                 </TableRow>
                             </TableHeader>
@@ -362,20 +494,32 @@ export default function TableProduk({
 
                                     const harga = asNum(r.harga)
                                     const qty = asNum(r.qty)
-                                    const totalPotensiKomisi = calcPotensiKomisi({ ...r, hpp })
+                                    const totalPotensiKomisi = calcPotensiKomisi({
+                                        ...r,
+                                        hpp,
+                                    })
                                     const totalMargin = calcMargin({ ...r, hpp })
 
                                     const kat = String(it.kategori || "").toUpperCase()
-                                    const isNotDecimal = kat === "BOND" || kat === "SHIELD"
+                                    const isNotDecimal =
+                                        kat === "BOND" || kat === "SHIELD"
 
                                     return (
                                         <TableRow key={r.id}>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`font-medium leading-tight ${hpp <= 0 && "line-through"}`}>
+                                                    <div
+                                                        className={`font-medium leading-tight ${
+                                                            hpp <= 0 &&
+                                                            "line-through"
+                                                        }`}
+                                                    >
                                                         {it.kodeItem || "-"}
                                                     </div>
-                                                    {String(activeFilter).toLowerCase() === CAT_ALL.toLowerCase() &&
+                                                    {String(
+                                                            activeFilter,
+                                                        ).toLowerCase() ===
+                                                        CAT_ALL.toLowerCase() &&
                                                         it.kategori && (
                                                             <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
                                                                 {it.kategori}
@@ -401,11 +545,27 @@ export default function TableProduk({
                                                 <div className="flex items-center justify-end gap-1">
                                                     <NumericInput
                                                         value={r.harga}
-                                                        softMin={hasMsrp ? ROUND2(msrp * MIN_RATIO) : undefined}
-                                                        softMax={hasMsrp ? ROUND2(msrp * MAX_RATIO) : undefined}
+                                                        softMin={
+                                                            hasMsrp
+                                                                ? ROUND2(
+                                                                    msrp *
+                                                                    MIN_RATIO,
+                                                                )
+                                                                : undefined
+                                                        }
+                                                        softMax={
+                                                            hasMsrp
+                                                                ? ROUND2(
+                                                                    msrp *
+                                                                    MAX_RATIO,
+                                                                )
+                                                                : undefined
+                                                        }
                                                         fixedDecimalScale={false}
                                                         onValue={(strNumeric) =>
-                                                            onChangeRow?.(r.id, { harga: strNumeric })
+                                                            onChangeRow?.(r.id, {
+                                                                harga: strNumeric,
+                                                            })
                                                         }
                                                         disabled={r.hargaLocked}
                                                         className="text-right w-24"
@@ -415,10 +575,15 @@ export default function TableProduk({
                                                         size="icon"
                                                         onClick={() =>
                                                             onChangeRow?.(r.id, {
-                                                                hargaLocked: !r.hargaLocked,
+                                                                hargaLocked:
+                                                                    !r.hargaLocked,
                                                             })
                                                         }
-                                                        title={r.hargaLocked ? "Buka kunci harga" : "Kunci harga"}
+                                                        title={
+                                                            r.hargaLocked
+                                                                ? "Buka kunci harga"
+                                                                : "Kunci harga"
+                                                        }
                                                         className="h-5 w-5"
                                                     >
                                                         {r.hargaLocked ? (
@@ -437,10 +602,15 @@ export default function TableProduk({
                                                         size="icon"
                                                         onClick={() =>
                                                             onChangeRow?.(r.id, {
-                                                                qtyLocked: !r.qtyLocked,
+                                                                qtyLocked:
+                                                                    !r.qtyLocked,
                                                             })
                                                         }
-                                                        title={r.qtyLocked ? "Buka kunci Qty" : "Kunci Qty"}
+                                                        title={
+                                                            r.qtyLocked
+                                                                ? "Buka kunci Qty"
+                                                                : "Kunci Qty"
+                                                        }
                                                         className="h-5 w-5"
                                                     >
                                                         {r.qtyLocked ? (
@@ -457,7 +627,9 @@ export default function TableProduk({
                                                         decimalScale={2}
                                                         fixedDecimalScale={true}
                                                         onValue={(strNumeric) =>
-                                                            onChangeRow?.(r.id, { qty: strNumeric })
+                                                            onChangeRow?.(r.id, {
+                                                                qty: strNumeric,
+                                                            })
                                                         }
                                                         disabled={r.qtyLocked}
                                                         className="text-right w-24"
@@ -471,8 +643,14 @@ export default function TableProduk({
                                                             Rp {fmt(totalMargin)}
                                                         </div>
                                                         <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase mt-0.5 inline-block">
-                                                            (Rp. {fmt(qty > 0 ? totalMargin / qty : 0)} /{" "}
-                                                            {r.satuan || "-"})
+                                                            (Rp.{" "}
+                                                            {fmt(
+                                                                qty > 0
+                                                                    ? totalMargin /
+                                                                    qty
+                                                                    : 0,
+                                                            )}{" "}
+                                                            / {r.satuan || "-"})
                                                         </span>
                                                     </div>
                                                 </TableCell>
@@ -486,8 +664,9 @@ export default function TableProduk({
                                                         (Rp.{" "}
                                                         {fmt(
                                                             qty > 0
-                                                                ? totalPotensiKomisi / qty
-                                                                : 0
+                                                                ? totalPotensiKomisi /
+                                                                qty
+                                                                : 0,
                                                         )}{" "}
                                                         / {r.satuan || "-"})
                                                     </span>
@@ -498,7 +677,9 @@ export default function TableProduk({
                                                 <Button
                                                     variant="outline"
                                                     size="icon"
-                                                    onClick={() => onRemoveRow?.(r.id)}
+                                                    onClick={() =>
+                                                        onRemoveRow?.(r.id)
+                                                    }
                                                     title="Hapus baris"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -528,11 +709,11 @@ export default function TableProduk({
 
             {/* Footer buttons */}
             <div className="flex flex-col sm:flex-row w-full items-center gap-2">
-                {/* ringkasan (mobile) */}
                 <Card className="block sm:hidden text-xs text-muted-foreground w-full text-center p-2 mb-2">
                     {komisiSummaryParts.length > 0 ? (
                         <>
-                            {komisiSummaryParts.join(" + ")} = <b>Rp. {fmt(grandTotalKomisi)}</b>
+                            {komisiSummaryParts.join(" + ")} ={" "}
+                            <b>Rp. {fmt(grandTotalKomisi)}</b>
                         </>
                     ) : (
                         <>
@@ -550,14 +731,18 @@ export default function TableProduk({
                         onClick={() => onExpandChange(!expand)}
                     >
                         <span>Achievement</span>
-                        {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {expand ? (
+                            <ChevronUp className="h-4 w-4" />
+                        ) : (
+                            <ChevronDown className="h-4 w-4" />
+                        )}
                     </Button>
 
-                    {/* ringkasan (desktop) */}
                     <div className="hidden sm:block text-xs text-muted-foreground text-center flex-1">
                         {komisiSummaryParts.length > 0 ? (
                             <>
-                                {komisiSummaryParts.join(" + ")} = <b>Rp. {fmt(grandTotalKomisi)}</b>
+                                {komisiSummaryParts.join(" + ")} ={" "}
+                                <b>Rp. {fmt(grandTotalKomisi)}</b>
                             </>
                         ) : (
                             <>
@@ -582,7 +767,8 @@ export default function TableProduk({
 
                 {String(activeFilter).toLowerCase() !== CAT_ALL.toLowerCase() && (
                     <div className="block w-full text-[10px] text-muted-foreground text-center sm:hidden">
-                        (Kategori aktif: <b>{activeFilter}</b> → Rp. {fmt(totalKomisiKategori)})
+                        (Kategori aktif: <b>{activeFilter}</b> → Rp.{" "}
+                        {fmt(totalKomisiKategori)})
                     </div>
                 )}
             </div>

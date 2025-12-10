@@ -87,7 +87,10 @@ const PrintSimulasi = forwardRef(function PrintSimulasi({ data }, ref) {
             <div className="text-center mb-6 border-b pb-4">
                 <h1 className="text-xl font-bold uppercase tracking-wide">Simulasi Komisi</h1>
                 <div className="text-sm text-gray-600">
-                    {data.judul || "Simulasi Komisi"} •{" "}
+                    {data.judul || "Simulasi Komisi"}
+                </div>
+                <div className="text-sm text-gray-600">
+                    {data.customer ||""} •{" "}
                     {data.dibuatTanggal ? new Date(data.dibuatTanggal).toLocaleString("id-ID") : "-"}
                 </div>
             </div>

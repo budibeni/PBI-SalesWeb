@@ -13,13 +13,6 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -33,6 +26,9 @@ import {
 import { Plus, Pencil, Trash2, Search as SearchIcon, RefreshCcw } from "lucide-react"
 import NumericInput from "@/components/ui/NumericInput"
 
+// ✅ import form dari file terpisah
+import Form from "./form"
+
 // ===== Utility =====
 const api = async (url, init) => {
     const res = await fetch(url, init)
@@ -41,8 +37,6 @@ const api = async (url, init) => {
     return j
 }
 
-const numToStr = (v) => (v == null || Number.isNaN(v) ? "" : String(v))
-const toNullNum = (s) => (s === "" || s == null ? null : Number(s))
 const fmtPct = (v) =>
     v != null && !Number.isNaN(v) ? `${(v * 100).toFixed(2)}%` : "—"
 
@@ -98,17 +92,17 @@ export default function KomisiPage() {
                             Atur Komisi per Kategori
                         </CardTitle>
                         <span className="hidden sm:inline-block text-xs text-muted-foreground">
-              {loading
-                  ? "Memuat…"
-                  : `Total ${items.length} • Hal ${page}/${totalPages}`}
-            </span>
+                            {loading
+                                ? "Memuat…"
+                                : `Total ${items.length} • Hal ${page}/${totalPages}`}
+                        </span>
                     </div>
 
                     {/* Kanan: form create + search + refresh (responsif) */}
                     <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center sm:justify-end">
                         {/* Tombol Tambah di mobile: full width, di desktop: kecil & rapat */}
                         <div className="w-full sm:w-auto">
-                            <KomisiForm mode="create" onDone={load} />
+                            <Form mode="create" onDone={load} />
                         </div>
 
                         <div className="flex gap-2 w-full sm:w-auto">
@@ -140,10 +134,10 @@ export default function KomisiPage() {
 
                         {/* Info total (tampil di mobile) */}
                         <span className="block sm:hidden text-[11px] text-muted-foreground text-right">
-              {loading
-                  ? "Memuat…"
-                  : `Total ${items.length} • Hal ${page}/${totalPages}`}
-            </span>
+                            {loading
+                                ? "Memuat…"
+                                : `Total ${items.length} • Hal ${page}/${totalPages}`}
+                        </span>
                     </div>
                 </CardHeader>
 
@@ -154,18 +148,23 @@ export default function KomisiPage() {
                             <Card key={r.id} className="border">
                                 <CardContent className="space-y-2">
                                     <div className="flex items-start justify-between gap-2">
-                                        <div className="font-semibold text-sm uppercase">
-                                            {r.kategori}
+                                        <div>
+                                            <div className="font-semibold text-sm uppercase">
+                                                {r.kategori}
+                                            </div>
+                                            <div className="text-[11px] text-muted-foreground">
+                                                Customer: <b>{r.customer}</b>
+                                            </div>
                                         </div>
                                         <div className="flex gap-1">
-                                            <KomisiForm mode="edit" initial={r} onDone={load} />
+                                            <Form mode="edit" initial={r} onDone={load} />
                                             <DeleteDialog id={r.id} onDone={load} />
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                                         <div className="space-y-0.5">
-                                            <div className="font-medium text-xs text-muted-foreground">Persentase</div>
+                                            <div className="font-medium text-xs text-muted-foreground">Persentase Item</div>
                                             <div>{fmtPct(r.persentase)}</div>
                                         </div>
                                         <div className="space-y-0.5">
@@ -199,73 +198,76 @@ export default function KomisiPage() {
                     {/* ===== DESKTOP: TABLE ===== */}
                     <Card className="hidden sm:block p-0.5">
                         <CardContent className="p-0 ">
-                            {/*<div className="rounded-md border overflow-x-auto">*/}
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Kategori</TableHead>
-                                            <TableHead>Persentase</TableHead>
-                                            <TableHead>Komisi Dasar</TableHead>
-                                            <TableHead>Bonus Utama</TableHead>
-                                            <TableHead>Bonus Extra</TableHead>
-                                            <TableHead>Dibuat</TableHead>
-                                            <TableHead>Diubah</TableHead>
-                                            <TableHead className="text-right">Aksi</TableHead>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Kategori</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Komisi Dasar</TableHead>
+                                        <TableHead>Bonus Utama</TableHead>
+                                        <TableHead>Bonus Extra</TableHead>
+                                        <TableHead>Dibuat</TableHead>
+                                        <TableHead>Diubah</TableHead>
+                                        <TableHead className="text-right">Aksi</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {items.map((r) => (
+                                        <TableRow key={r.id}>
+                                            <TableCell className="font-medium">
+                                                {r.kategori}
+                                            </TableCell>
+                                            <TableCell>{r.customer}</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col text-xs">
+                                                    <span>Min Ach : {fmtPct(r.minAchKomisiDasar)}</span>
+                                                    <span>Value : {fmtPct(r.persentase)}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col text-xs">
+                                                    <span>Min Ach : {fmtPct(r.minAchBonusUtama)}</span>
+                                                    <span>Value : {fmtPct(r.valueBonusUtama)}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col text-xs">
+                                                    <span>Min Ach : {fmtPct(r.minAchBonusExtra)}</span>
+                                                    <span>Value : {fmtPct(r.valueBonusExtra)}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col text-xs text-muted-foreground">
+                                                    <span>{r.dibuatOleh ?? "—"}</span>
+                                                    <span>{fmtDateTime(r.dibuatTanggal)}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col text-xs text-muted-foreground">
+                                                    <span>{r.diubahOleh ?? "—"}</span>
+                                                    <span>{fmtDateTime(r.diubahTanggal)}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Form mode="edit" initial={r} onDone={load} />
+                                                    <DeleteDialog id={r.id} onDone={load} />
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {items.map((r) => (
-                                            <TableRow key={r.id}>
-                                                <TableCell className="font-medium">
-                                                    {r.kategori}
-                                                </TableCell>
-                                                <TableCell>{fmtPct(r.persentase)}</TableCell>
-                                                <TableCell>{fmtPct(r.minAchKomisiDasar)}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col text-xs">
-                                                        <span>Min Ach : {fmtPct(r.minAchBonusUtama)}</span>
-                                                        <span>Value : {fmtPct(r.valueBonusUtama)}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col text-xs">
-                                                        <span>Min Ach : {fmtPct(r.minAchBonusExtra)}</span>
-                                                        <span>Value : {fmtPct(r.valueBonusExtra)}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col text-xs text-muted-foreground">
-                                                        <span>{r.dibuatOleh ?? "—"}</span>
-                                                        <span>{fmtDateTime(r.dibuatTanggal)}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col text-xs text-muted-foreground">
-                                                        <span>{r.diubahOleh ?? "—"}</span>
-                                                        <span>{fmtDateTime(r.diubahTanggal)}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <KomisiForm mode="edit" initial={r} onDone={load} />
-                                                        <DeleteDialog id={r.id} onDone={load} />
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {items.length === 0 && !loading && (
-                                            <TableRow>
-                                                <TableCell
-                                                    colSpan={8}
-                                                    className="py-8 text-center text-muted-foreground"
-                                                >
-                                                    Tidak ada data
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            {/*</div>*/}
+                                    ))}
+                                    {items.length === 0 && !loading && (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan={9}
+                                                className="py-8 text-center text-muted-foreground"
+                                            >
+                                                Tidak ada data
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
                         </CardContent>
                     </Card>
 
@@ -296,163 +298,6 @@ export default function KomisiPage() {
                 </CardContent>
             </Card>
         </div>
-    )
-}
-
-// ===== KomisiForm (Create/Edit) =====
-function KomisiForm({ mode = "create", initial = {}, onDone }) {
-    const [open, setOpen] = useState(false)
-    const [busy, setBusy] = useState(false)
-
-    const seed = (r) => ({
-        kategori: r.kategori ?? "",
-        persentase: numToStr(r.persentase),
-        minAchKomisiDasar: numToStr(r.minAchKomisiDasar),
-        minAchBonusUtama: numToStr(r.minAchBonusUtama),
-        valueBonusUtama: numToStr(r.valueBonusUtama),
-        minAchBonusExtra: numToStr(r.minAchBonusExtra),
-        valueBonusExtra: numToStr(r.valueBonusExtra),
-    })
-
-    const [f, setF] = useState(() => seed(initial))
-
-    useEffect(() => {
-        if (open) setF(seed(initial))
-    }, [open, initial?.id])
-
-    const submit = async (e) => {
-        e.preventDefault()
-        if (!f.kategori.trim()) return alert("Kategori wajib diisi")
-
-        setBusy(true)
-        try {
-            const payload = {
-                kategori: f.kategori,
-                persentase: toNullNum(f.persentase),
-                minAchKomisiDasar: toNullNum(f.minAchKomisiDasar),
-                minAchBonusUtama: toNullNum(f.minAchBonusUtama),
-                valueBonusUtama: toNullNum(f.valueBonusUtama),
-                minAchBonusExtra: toNullNum(f.minAchBonusExtra),
-                valueBonusExtra: toNullNum(f.valueBonusExtra),
-            }
-
-            const url = mode === "create" ? "/api/kategori" : `/api/kategori/${initial.id}`
-            const method = mode === "create" ? "POST" : "PATCH"
-            await api(url, {
-                method,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            })
-
-            alert("Tersimpan ✔︎")
-            setOpen(false)
-            onDone?.()
-        } catch (err) {
-            alert("Gagal menyimpan: " + err.message)
-        } finally {
-            setBusy(false)
-        }
-    }
-
-    const title = mode === "create" ? "Tambah Komisi" : "Edit Komisi"
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                {mode === "create" ? (
-                    <Button className="w-full sm:w-auto">
-                        <Plus className="h-4 w-4 mr-2" /> Tambah
-                    </Button>
-                ) : (
-                    <Button size="sm" variant="outline">
-                        <Pencil className="h-4 w-4" />
-                    </Button>
-                )}
-            </DialogTrigger>
-
-            <DialogContent className="max-h-[85dvh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>{title}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={submit} className="space-y-4">
-                    <Field label="Kategori *">
-                        <Input
-                            autoFocus
-                            value={f.kategori}
-                            onChange={(e) =>
-                                setF((s) => ({ ...s, kategori: e.target.value }))
-                            }
-                            placeholder="BLOCK / SLAB / BOND / SHIELD"
-                        />
-                    </Field>
-
-                    <p className="text-xs text-muted-foreground">
-                        Isi data di bawah ini dalam bentuk desimal. Contoh: 10% ditulis{" "}
-                        <b>0.10</b>
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {[
-                            [
-                                "persentase",
-                                "Komisi Kategori Item",
-                                "Rumus: (harga - hpp) × qty × value",
-                            ],
-                            [
-                                "minAchKomisiDasar",
-                                "Min Ach Komisi Dasar",
-                                "Min achievement untuk komisi dasar",
-                            ],
-                            [
-                                "minAchBonusUtama",
-                                "Min Ach Bonus Utama",
-                                "Min achievement untuk bonus utama",
-                            ],
-                            [
-                                "valueBonusUtama",
-                                "Value Bonus Utama",
-                                "Rumus: Komisi Dasar × value",
-                            ],
-                            [
-                                "minAchBonusExtra",
-                                "Min Ach Bonus Extra",
-                                "Min achievement untuk bonus extra",
-                            ],
-                            [
-                                "valueBonusExtra",
-                                "Value Bonus Extra",
-                                "Rumus: (Ach × Komisi Dasar × value) − (Komisi Dasar + Bonus Utama)",
-                            ],
-                        ].map(([key, label, ket]) => (
-                            <Field key={key} label={label} keterangan={ket}>
-                                <NumericInput
-                                    value={f[key]}
-                                    onValue={(v) => setF((s) => ({ ...s, [key]: v }))}
-                                    decimalScale={8}
-                                    fixedDecimalScale={false}
-                                    allowNegative={false}
-                                    className="w-full"
-                                />
-                            </Field>
-                        ))}
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setOpen(false)}
-                            disabled={busy}
-                        >
-                            Batal
-                        </Button>
-                        <Button type="submit" disabled={busy}>
-                            Simpan
-                        </Button>
-                    </div>
-                </form>
-            </DialogContent>
-        </Dialog>
     )
 }
 
@@ -497,7 +342,7 @@ function DeleteDialog({ id, onDone }) {
     )
 }
 
-// ===== Field Wrapper =====
+// ===== Field Wrapper (masih dipakai kalau mau, tapi form utama sekarang di file lain) =====
 function Field({ label, children, keterangan = "" }) {
     return (
         <div className="space-y-1.5">

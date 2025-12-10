@@ -65,6 +65,7 @@ export async function PATCH(req, { params }) {
                 // meta
                 judul: body.judul ?? existing.judul,
                 catatan: body.catatan ?? existing.catatan,
+                customer: body.customer ?? existing.customer,
 
                 // target & achievement
                 targetGlobal: body.targetGlobal ?? existing.targetGlobal,

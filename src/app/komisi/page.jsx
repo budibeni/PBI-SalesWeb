@@ -11,6 +11,7 @@ import DialogList from "./DialogList"
 import PrintSimulasi from "./PrintSimulasi"
 import { useReactToPrint } from "react-to-print"
 import { useUser } from "@/providers/UserProvider"
+import { useKategori } from "@/providers/KategoriProvider"
 
 const CAT_ALL = "__ALL__"
 const j = (v) => JSON.stringify(v ?? null)
@@ -20,8 +21,8 @@ export default function Page() {
     const user = useUser()
     const isAdmin = user?.role === "admin"
 
-    // --- state utama ---
     const [idSimulasi, setIdSimulasi] = React.useState(null)
+    const [customer, setCustomer] = React.useState("RETAIL")
     const [judulSimulasi, setJudulSimulasi] = React.useState("")
     const [rows, setRows] = React.useState([])
 
@@ -37,6 +38,15 @@ export default function Page() {
     const [marginKategori, setMarginKategori] = React.useState(0)
     const [selectedCat, setSelectedCat] = React.useState(CAT_ALL)
 
+    const { items: masterKomisiRaw } = useKategori()
+    const masterKomisiSelected = React.useMemo(() => {
+        if (!Array.isArray(masterKomisiRaw)) return []
+        return masterKomisiRaw.filter((row) => {
+            const c = (row.customer || "RETAIL").toUpperCase()
+            return c === customer.toUpperCase()
+        })
+    }, [masterKomisiRaw, customer])
+
     const [summary, setSummary] = React.useState({
         komisiDasarTotal: 0,
         komisiDasarPerKategori: {},
@@ -46,6 +56,37 @@ export default function Page() {
         bonusExtraPerKategori: {},
         subtotalTotal: 0,
     })
+
+
+    React.useEffect(() => {
+        if (!Array.isArray(masterKomisiSelected)) return
+
+        setAchievementRows((prev) => {
+            const prevMap = new Map()
+            ;(prev || []).forEach((r) => {
+                if (r && r.kategori) prevMap.set(r.kategori, r)
+            })
+
+            const next = masterKomisiSelected.map((it) => {
+                const kat = it.kategori
+                const old = prevMap.get(kat)
+                const achievement = old?.achievement ?? 0
+
+                return {
+                    kategori: kat,
+                    persentase: it.persentase ?? null,
+                    minAchKomisiDasar: it.minAchKomisiDasar ?? null,
+                    minBonusUtama: it.minAchBonusUtama ?? null,
+                    valueBonusUtama: it.valueBonusUtama ?? null,
+                    minBonusExtra: it.minAchBonusExtra ?? null,
+                    valueBonusExtra: it.valueBonusExtra ?? null,
+                    achievement,
+                }
+            })
+
+            return j(prev) === j(next) ? prev : next
+        })
+    }, [masterKomisiSelected])
 
     // --- dialog & print ---
     const [saving, setSaving] = React.useState(false)
@@ -117,12 +158,10 @@ export default function Page() {
 
         return {
             judul: judulSimulasi || "Simulasi Komisi",
+            customer,
             targetGlobal,
             targetKategori: targetKategoriSaved,
-
-            // ✅ hanya kirim struktur baru
             achievementKategori: achievementRows || [],
-
             komisiDasarTotal: Number(summary.komisiDasarTotal || 0),
             komisiDasarKategori: summary.komisiDasarPerKategori || {},
             bonusUtamaTotal: Number(summary.bonusUtamaTotal || 0),
@@ -149,7 +188,7 @@ export default function Page() {
                 }
             }),
         }
-    }, [judulSimulasi, targetKomisi, achievementRows, summary, rows, itemById])
+    }, [judulSimulasi, customer, targetKomisi, achievementRows, summary, rows, itemById])
 
     // Simpan baru / update
     const handleSave = async () => {
@@ -203,12 +242,12 @@ export default function Page() {
             const d = json.data
             setIdSimulasi(d.id)
             setJudulSimulasi(d.judul || "")
+            setCustomer((d.customer || "RETAIL").toUpperCase())
             setTargetKomisi({
                 global: String(d.targetGlobal ?? ""),
                 perKategori: d.targetKategori || {},
             })
 
-            // ✅ muat struktur baru; set aman (hindari setState kalau sama)
             setAchievementRowsSafe(
                 Array.isArray(d.achievementKategori) ? d.achievementKategori : []
             )
@@ -269,6 +308,9 @@ export default function Page() {
                 saving={saving}
                 isUpdate={!!idSimulasi}
                 judul={judulSimulasi}
+                customer={customer}
+                setCustomer={setCustomer}
+                masterKomisiSelected={masterKomisiSelected}
             />
 
             <TableProduk
@@ -277,6 +319,7 @@ export default function Page() {
                 onChangeRow={onChangeRow}
                 onRemoveRow={onRemoveRow}
                 onPick={onPick}
+                masterKomisiSelected={masterKomisiSelected}
                 selectedCat={selectedCat}
                 onChangeCategory={setSelectedCat}
                 targetKomisi={targetKomisi}
@@ -288,8 +331,9 @@ export default function Page() {
 
             <AchTarget
                 show={showAchTarget}
-                valueRows={achievementRows}      // nilai awal array
-                onComputed={setAchievementRowsSafe} // hasil array detail (aman)
+                masterKomisiSelected={masterKomisiSelected}
+                valueRows={achievementRows}
+                onComputed={setAchievementRowsSafe}
             />
 
             <FooterPage

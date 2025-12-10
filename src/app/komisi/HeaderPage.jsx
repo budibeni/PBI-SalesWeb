@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { BookmarkCheck, List, RefreshCcw, Save, Trash2 } from "lucide-react"
 import TargetKomisi from "./TargetKomisi"
 
+
 export default function HeaderPage({
                                        loading,
                                        ready,
@@ -17,6 +18,9 @@ export default function HeaderPage({
                                        isUpdate,
                                        judul = "",
                                        onShowList,
+                                       customer,
+                                       setCustomer,
+                                       masterKomisiSelected,
                                    }) {
     return (
         <Card className="mx-auto py-4 sm:py-6 gap-4 sm:gap-6">
@@ -97,6 +101,9 @@ export default function HeaderPage({
                 <TargetKomisi
                     targetKomisi={targetKomisi}
                     onChangeTargetKomisi={setTargetKomisi}
+                    customer = {customer}
+                    setCustomer={setCustomer}
+                    masterKomisiSelected={masterKomisiSelected}
                 />
             </CardContent>
         </Card>

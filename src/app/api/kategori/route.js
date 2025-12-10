@@ -22,24 +22,30 @@ export async function GET(req) {
         const url = new URL(req.url)
         const q = (url.searchParams.get("q") || "").trim()
         const page = Math.max(1, Number(url.searchParams.get("page") || 1))
-        const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") || 20)))
+        const pageSize = Math.min(
+            100,
+            Math.max(1, Number(url.searchParams.get("pageSize") || 20)),
+        )
         const skip = (page - 1) * pageSize
 
         const where = q
-            ? { OR: [{ kategori: { contains: q} }] }
+            ? {
+                OR: [
+                    { kategori: { contains: q, mode: "insensitive" } },
+                    { customer: { contains: q, mode: "insensitive" } },
+                ],
+            }
             : {}
 
         const [items, total] = await Promise.all([
             prisma.tbMasterKomisi.findMany({
                 where,
-                orderBy: { kategori: "asc" },
+                orderBy: [{ kategori: "asc" }, { customer: "asc" }],
                 skip,
                 take: pageSize,
             }),
             prisma.tbMasterKomisi.count({ where }),
         ])
-
-
 
         return NextResponse.json({
             ok: true,
@@ -51,7 +57,10 @@ export async function GET(req) {
         })
     } catch (e) {
         console.error("GET /api/kategori error:", e)
-        return NextResponse.json({ ok: false, error: "Internal Server Error" }, { status: 500 })
+        return NextResponse.json(
+            { ok: false, error: "Internal Server Error" },
+            { status: 500 },
+        )
     }
 }
 
@@ -60,8 +69,35 @@ export async function POST(req) {
     try {
         const body = await req.json()
         const kategori = strOrNull(body.kategori)
+        const customer = strOrNull(body.customer)
+
         if (!kategori) {
-            return NextResponse.json({ ok: false, error: "Kategori wajib diisi" }, { status: 400 })
+            return NextResponse.json(
+                { ok: false, error: "Kategori wajib diisi" },
+                { status: 400 },
+            )
+        }
+
+        if (!customer) {
+            return NextResponse.json(
+                { ok: false, error: "Customer wajib diisi" },
+                { status: 400 },
+            )
+        }
+
+        // 🔒 Cek dulu apakah kombinasi kategori+customer sudah ada
+        const existing = await prisma.tbMasterKomisi.findFirst({
+            where: { kategori, customer },
+        })
+
+        if (existing) {
+            return NextResponse.json(
+                {
+                    ok: false,
+                    error: "Kombinasi kategori + customer sudah ada, tidak boleh duplikat.",
+                },
+                { status: 400 },
+            )
         }
 
         const user = await getCurrentUser()
@@ -70,6 +106,7 @@ export async function POST(req) {
         const created = await prisma.tbMasterKomisi.create({
             data: {
                 kategori,
+                customer,
                 persentase: numOrNull(body.persentase),
                 minAchKomisiDasar: numOrNull(body.minAchKomisiDasar),
                 minAchBonusUtama: numOrNull(body.minAchBonusUtama),
@@ -84,7 +121,7 @@ export async function POST(req) {
     } catch (e) {
         const msg =
             e?.code === "P2002"
-                ? "Kategori sudah ada (unik)."
+                ? "Kombinasi kategori + customer sudah ada (unik)."
                 : e?.message || "Gagal membuat data"
         console.error("POST /api/kategori error:", e)
         return NextResponse.json({ ok: false, error: msg }, { status: 500 })

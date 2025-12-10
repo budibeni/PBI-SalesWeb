@@ -1,11 +1,17 @@
 "use client"
 
 import React from "react"
-import { useKategori } from "@/providers/KategoriProvider"
 import { Button } from "@/components/ui/button"
 import NumericInput from "@/components/ui/NumericInput"
 import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react"
-import {fmt} from "@/lib/format";
+import { fmt } from "@/lib/format"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 
 const isFilled = (v) => String(v ?? "").trim().length > 0
 const toNumAny = (raw) => {
@@ -127,16 +133,28 @@ function computeTargets({ expand, targetKomisi }) {
     }
 }
 
-export default function TargetKomisi({ targetKomisi, onChangeTargetKomisi }) {
-    const { items: kategoriItems, ready: katReady } = useKategori()
+export default function TargetKomisi({
+                                         targetKomisi,
+                                         onChangeTargetKomisi,
+                                         customer,
+                                         setCustomer,
+                                         masterKomisiSelected,       // 🔹 data master komisi per customer (dari Page)
+                                     }) {
     const [expand, setExpand] = React.useState(false)
 
+    // 🔹 Daftar kategori berdasarkan masterKomisiSelected (bukan useKategori lagi)
     const kategoriList = React.useMemo(
         () =>
-            Array.isArray(kategoriItems)
-                ? kategoriItems.map((r) => r.kategori).filter(Boolean)
+            Array.isArray(masterKomisiSelected)
+                ? Array.from(
+                    new Set(
+                        masterKomisiSelected
+                            .map((r) => r.kategori)
+                            .filter(Boolean)
+                    )
+                )
                 : [],
-        [kategoriItems]
+        [masterKomisiSelected]
     )
 
     const calc = React.useMemo(
@@ -197,40 +215,60 @@ export default function TargetKomisi({ targetKomisi, onChangeTargetKomisi }) {
 
     return (
         <div className="px-2 sm:px-4 space-y-3">
-            {/* Global input */}
-            <div className="w-full">
-                <div className="flex gap-2 w-full">
-                    <NumericInput
-                        value={targetKomisi?.global ?? ""}
-                        onValue={setGlobal}
-                        decimalScale={0}
-                        placeholder={
-                            expand
-                                ? calc.forcedMode === "%"
-                                    ? "Target Global (Mode Persentase)"
-                                    : `Target Global: Rp. ${fmt(calc.global)}`
-                                : "Silakan tentukan target"
-                        }
-                        className="flex-1 min-w-0"
-                        inputMode="decimal"
-                    />
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setExpand((prev) => !prev)}
-                        className="h-auto px-3 shrink-0"
-                        style={{ minHeight: 0 }}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <div className="w-full sm:w-36">
+                    <Select
+                        value={customer}
+                        onValueChange={(val) => setCustomer?.(val)}
                     >
-                        {expand ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih Customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="PROJECT">PROJECT</SelectItem>
+                            <SelectItem value="RETAIL">RETAIL</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* Global input */}
+                <div className="w-full">
+                    <div className="flex gap-2 w-full">
+                        <NumericInput
+                            value={targetKomisi?.global ?? ""}
+                            onValue={setGlobal}
+                            decimalScale={0}
+                            placeholder={
+                                expand
+                                    ? calc.forcedMode === "%"
+                                        ? "Target Global (Mode Persentase)"
+                                        : `Target Global: Rp. ${fmt(calc.global)}`
+                                    : "Silakan tentukan target"
+                            }
+                            className="flex-1 min-w-0"
+                            inputMode="decimal"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setExpand((prev) => !prev)}
+                            className="h-auto px-3 shrink-0"
+                            style={{ minHeight: 0 }}
+                        >
+                            {expand ? (
+                                <ChevronUp className="h-4 w-4" />
+                            ) : (
+                                <ChevronDown className="h-4 w-4" />
+                            )}
+                        </Button>
+                    </div>
                 </div>
             </div>
 
             {/* === Caption ketika collapsed === */}
             {!expand && (
                 <div className="text-xs text-muted-foreground mt-1">
-                    {/* Mode persen */}
                     {calc.forcedMode === "%" ? (
                         hasAnyPerKatRaw ? (
                             <div>
@@ -238,36 +276,58 @@ export default function TargetKomisi({ targetKomisi, onChangeTargetKomisi }) {
                                     Persentase per kategori:{" "}
                                     <b>
                                         {perKatPercentList
-                                            .map(([k, p]) => `${k} ${fmt(p, 2)}%`)
+                                            .map(
+                                                ([k, p]) =>
+                                                    `${k} ${fmt(p, 2)}%`
+                                            )
                                             .join(" • ")}
                                     </b>
                                 </div>
                                 <div>
-                                    Total Persentase: <b>{fmt(calc.totalPercent * 100, 2)}%</b> •
-                                    Sisa: <b>{fmt(calc.remainingPct * 100, 2)}%</b> (Rp.{" "}
+                                    Total Persentase:{" "}
+                                    <b>
+                                        {fmt(
+                                            calc.totalPercent * 100,
+                                            2
+                                        )}
+                                        %
+                                    </b>{" "}
+                                    • Sisa:{" "}
+                                    <b>
+                                        {fmt(
+                                            calc.remainingPct * 100,
+                                            2
+                                        )}
+                                        %
+                                    </b>{" "}
+                                    (Rp.{" "}
                                     <b>{fmt(calc.remainingNominal)}</b>)
                                 </div>
                             </div>
                         ) : (
                             <div>
-                                Anda belum menentukan persentase target per kategori.
+                                Anda belum menentukan persentase target per
+                                kategori.
                             </div>
                         )
                     ) : (
                         hasAnyPerKatRaw && (
                             <div>
                                 <div>
-                                    TOTAL TARGET : <b>Rp. {fmt(calc.totalNominal)}</b>
+                                    TOTAL TARGET :{" "}
+                                    <b>Rp. {fmt(calc.totalNominal)}</b>
                                 </div>
                                 <div className="mb-1">
                                     Target per kategori:{" "}
                                     <b>
                                         {perKatNominalList
-                                            .map(([k, p]) => `${k} ${fmt(p, 2)}`)
+                                            .map(
+                                                ([k, p]) =>
+                                                    `${k} ${fmt(p, 2)}`
+                                            )
                                             .join(" • ")}
                                     </b>
                                 </div>
-
                             </div>
                         )
                     )}
@@ -278,7 +338,9 @@ export default function TargetKomisi({ targetKomisi, onChangeTargetKomisi }) {
             {expand && (
                 <div className="space-y-3 mt-4">
                     <div className="flex justify-between items-center">
-                        <div className="text-sm font-medium">Target per Kategori</div>
+                        <div className="text-sm font-medium">
+                            Target per Kategori
+                        </div>
                         <Button
                             type="button"
                             size="sm"
@@ -292,15 +354,21 @@ export default function TargetKomisi({ targetKomisi, onChangeTargetKomisi }) {
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {(katReady ? kategoriList : []).map((kat) => {
-                            const raw = targetKomisi?.perKategori?.[kat] ?? ""
-                            const nominal = calc.perKategoriNominal[kat] ?? 0
+                        {kategoriList.map((kat) => {
+                            const raw =
+                                targetKomisi?.perKategori?.[kat] ?? ""
+                            const nominal =
+                                calc.perKategoriNominal[kat] ?? 0
                             const info =
                                 calc.forcedMode === "%"
                                     ? `= Rp. ${fmt(nominal)}`
                                     : (() => {
                                         const pct =
-                                            totalKategori > 0 ? (nominal / totalKategori) * 100 : 0
+                                            totalKategori > 0
+                                                ? (nominal /
+                                                    totalKategori) *
+                                                100
+                                                : 0
                                         return `= ${fmt(pct, 2)}%`
                                     })()
 
@@ -309,17 +377,25 @@ export default function TargetKomisi({ targetKomisi, onChangeTargetKomisi }) {
                                     <label className="text-sm">
                                         {kat}{" "}
                                         <span className="text-muted-foreground">
-                      ({calc.forcedMode})
-                    </span>
+                                            ({calc.forcedMode})
+                                        </span>
                                     </label>
                                     <NumericInput
                                         fixedDecimalScale={false}
-                                        decimalScale={calc.forcedMode === "%" ? 2 : 0}
+                                        decimalScale={
+                                            calc.forcedMode === "%"
+                                                ? 2
+                                                : 0
+                                        }
                                         value={raw}
-                                        onValue={(v) => setPerKat(kat, v)}
+                                        onValue={(v) =>
+                                            setPerKat(kat, v)
+                                        }
                                         inputMode="decimal"
                                     />
-                                    <div className="text-xs text-muted-foreground">{info}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {info}
+                                    </div>
                                 </div>
                             )
                         })}

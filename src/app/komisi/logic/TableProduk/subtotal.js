@@ -8,6 +8,7 @@
 import { asNum, ROUND2 } from "./math.js";
 
 export const calcPotensiKomisi = (row) => {
+    // console.info('row.persen',row.persen)
     const harga  = asNum(row.harga);
     const hpp    = asNum(row.hpp);
     const qty    = asNum(row.qty);

@@ -3,7 +3,6 @@
 
 import React from "react"
 import useItems from "@/hooks/useItems"
-import { useKategori } from "@/providers/KategoriProvider"
 import MasterInputSearchTitleDesc from "@/components/master-input-search/MasterInputSearchTitleDesc"
 import {
     Select,
@@ -17,42 +16,48 @@ export const CAT_ALL = "__ALL__"
 
 export default function SearchItem({
                                        onPick,
-                                       selectedCat = CAT_ALL,                 // <-- dikontrol parent
-                                       onChangeCategory = () => {},            // <-- dikontrol parent
+                                       masterKomisiSelected = [],
+                                       selectedCat = CAT_ALL,
+                                       onChangeCategory = () => {},
                                    }) {
     const { items } = useItems()
-    const { items: kategoriItems, ready: katReady } = useKategori()
 
-    // daftar kategori dari provider komisi
+    // 🔹 daftar kategori dari masterKomisiSelected
     const kategoriList = React.useMemo(() => {
-        const arr = Array.isArray(kategoriItems)
-            ? kategoriItems.map((r) => r.kategori).filter(Boolean)
+        const arr = Array.isArray(masterKomisiSelected)
+            ? masterKomisiSelected
+                .map((r) => r.kategori)
+                .filter(Boolean)
             : []
+
         return Array.from(new Set(arr)).sort((a, b) =>
             String(a).localeCompare(String(b), "id"),
         )
-    }, [kategoriItems])
+    }, [masterKomisiSelected])
 
-    // map kategori → persentase komisi
+    // 🔹 map kategori → persentase komisi (desimal 0.1 = 10%)
     const persenByKategori = React.useMemo(() => {
         const m = new Map()
-        ;(kategoriItems || []).forEach((r) => {
+        ;(masterKomisiSelected || []).forEach((r) => {
             const key = String(r.kategori || "").trim().toLowerCase()
-            m.set(key, Number(r.persentase || 0))   // desimal (0.1 = 10%)
+            m.set(key, Number(r.persentase || 0))
         })
         return m
-    }, [kategoriItems])
+    }, [masterKomisiSelected])
 
-    // filter kategori + query pencarian
+    // 🔹 filter kategori + query pencarian produk
     const fetchPicker = React.useCallback(
         async (q) => {
             const qq = (q || "").trim().toLowerCase()
+
             const filteredByCat = (items || []).filter((it) => {
                 if (selectedCat === CAT_ALL) return true
                 const k = String(it.kategori || "").trim()
                 return k.toLowerCase() === String(selectedCat).toLowerCase()
             })
+
             if (!qq) return filteredByCat
+
             return filteredByCat.filter((it) => {
                 const hay = `${it.kodeItem || ""} ${it.namaItem || ""}`.toLowerCase()
                 return hay.includes(qq)
@@ -63,8 +68,10 @@ export default function SearchItem({
 
     const handlePick = (it) => {
         if (!it) return
+
         const key = String(it.kategori || "").trim().toLowerCase()
         const persen = persenByKategori.get(key) ?? 0
+
         const rowBaru = {
             id: it.id,
             kodeItem: it.kodeItem,
@@ -75,15 +82,18 @@ export default function SearchItem({
             msrp: Number(it.harga ?? 0),
             harga: Number(it.harga ?? 0),
             qty: 0,
-            persen,
+            persen, // 🔹 komisi dari masterKomisiSelected (sesuai customer)
         }
+
         onPick?.(rowBaru)
     }
 
+    const disabled =
+        !Array.isArray(masterKomisiSelected) || masterKomisiSelected.length === 0
+
     return (
         <div className="flex flex-row items-center gap-2 w-full">
-            {/* Input pencarian produk: w-24 di mobile, flex-1 di desktop */}
-            {/*<div className="sm:flex-1 sm:w-auto min-w-0">*/}
+            {/* Input pencarian produk */}
             <div className="flex-1">
                 <MasterInputSearchTitleDesc
                     value={null}
@@ -100,13 +110,11 @@ export default function SearchItem({
                     buttonClassName="w-full justify-between"
                     popoverClassName="min-w-[28rem]"
                     allowClear={false}
-                    // isResponsive={true}
-                    disabled={!katReady && (kategoriItems || []).length === 0}
+                    disabled={disabled}
                 />
             </div>
 
-            {/* Filter kategori: sisa lebar di mobile, w-48 di desktop */}
-            {/*<div className="flex-1 sm:flex-none sm:w-48">*/}
+            {/* Filter kategori */}
             <div className="min-w-40">
                 <Select value={selectedCat} onValueChange={onChangeCategory}>
                     <SelectTrigger className="w-full">

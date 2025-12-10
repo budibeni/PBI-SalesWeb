@@ -136,7 +136,7 @@ export default function KalkulatorPage() {
 
     return (
         <>
-            <Card className="mx-auto max-w-6xl mb-4">
+            <Card className="mx-auto mb-4">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle>
                         <div className="flex items-center gap-1 sm:whitespace-nowrap text-xs sm:text-lg">
