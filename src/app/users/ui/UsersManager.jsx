@@ -14,7 +14,7 @@ import { groupMenusBySection, defaultAccess, normalizeAccess } from "@/lib/acces
 import { SIDEBAR_MENUS } from "@/components/constants/sidebar-menu"
 import { UserPlus, Settings2 } from "lucide-react"
 import { useApiAuth } from "@/lib/client-api"
-import { Switch } from "@/components/ui/switch" // ⬅️ tambah
+import { Switch } from "@/components/ui/switch"
 
 function AccessEditor({ value, onChange }) {
     const sections = useMemo(() => groupMenusBySection(), [])
@@ -27,7 +27,7 @@ function AccessEditor({ value, onChange }) {
         onChange(next)
     }
     const allOn = Object.values(state).every(Boolean)
-    const allOff = Object.values(state).every(v => !v)
+    const allOff = Object.values(state).every((v) => !v)
     const setAll = (v) => {
         const next = {}
         for (const m of SIDEBAR_MENUS) next[m.id] = !!v
@@ -44,9 +44,11 @@ function AccessEditor({ value, onChange }) {
                     Nonaktifkan Semua
                 </Button>
             </div>
+
             <Separator />
+
             {Object.entries(sections).map(([section, items]) => {
-                const sectionOn = items.every(i => state[i.id])
+                const sectionOn = items.every((i) => state[i.id])
                 return (
                     <div key={section} className="space-y-1">
                         <div className="flex items-center justify-between">
@@ -55,8 +57,9 @@ function AccessEditor({ value, onChange }) {
                                 {sectionOn ? "Matikan" : "Aktifkan"} {section}
                             </Button>
                         </div>
+
                         <div className="grid sm:grid-cols-2 gap-2">
-                            {items.map(m => (
+                            {items.map((m) => (
                                 <label key={m.id} className="flex items-center gap-2 rounded-md border px-2 py-1">
                                     <Checkbox checked={!!state[m.id]} onCheckedChange={(v) => setOne(m.id, v)} />
                                     <span>{m.label}</span>
@@ -77,19 +80,26 @@ export default function UsersManager({ initialUsers }) {
     const [openEdit, setOpenEdit] = useState(null)
     const [creating, setCreating] = useState(false)
     const [updating, setUpdating] = useState(false)
+    const [resetting, setResetting] = useState(false) // ⬅️ tambah
     const [error, setError] = useState("")
 
     // form create
     const [f, setF] = useState({
-        akun: "", email: "", noHp: "", nama: "", bagian: "",
-        role: "user", password: "",
+        akun: "",
+        email: "",
+        noHp: "",
+        nama: "",
+        bagian: "",
+        role: "user",
+        password: "",
         akses: defaultAccess(false),
-        aktif: true, // default aktif
+        aktif: true,
     })
 
     const createUser = async (e) => {
         e.preventDefault()
-        setCreating(true); setError("")
+        setCreating(true)
+        setError("")
         try {
             await apiAuth("/api/users", {
                 method: "POST",
@@ -98,7 +108,17 @@ export default function UsersManager({ initialUsers }) {
             const list = await apiAuth("/api/users")
             setUsers(list?.users || [])
             setOpenNew(false)
-            setF({ akun:"", email:"", noHp:"", nama:"", bagian:"", role:"user", password:"", akses: defaultAccess(false), aktif: true })
+            setF({
+                akun: "",
+                email: "",
+                noHp: "",
+                nama: "",
+                bagian: "",
+                role: "user",
+                password: "",
+                akses: defaultAccess(false),
+                aktif: true,
+            })
         } catch (err) {
             setError(err.message)
         } finally {
@@ -106,24 +126,25 @@ export default function UsersManager({ initialUsers }) {
         }
     }
 
-    const userById = (id) => users.find(u => u.id === id)
+    const userById = (id) => users.find((u) => u.id === id)
     const [editAccess, setEditAccess] = useState(defaultAccess(false))
-    const [editAktif, setEditAktif] = useState(true) // ⬅️ state status untuk dialog edit
+    const [editAktif, setEditAktif] = useState(true)
 
     const openEditFor = (id) => {
         const u = userById(id)
         setEditAccess(normalizeAccess(u?.akses || {}))
-        setEditAktif(!!u?.aktif) // ⬅️ set status awal
+        setEditAktif(!!u?.aktif)
         setOpenEdit(id)
     }
 
     const saveAccess = async () => {
         if (!openEdit) return
-        setUpdating(true); setError("")
+        setUpdating(true)
+        setError("")
         try {
             await apiAuth(`/api/users/${openEdit}`, {
                 method: "PATCH",
-                body: { akses: editAccess, aktif: editAktif }, // ⬅️ kirim akses + status
+                body: { akses: editAccess, aktif: editAktif },
             })
             const list = await apiAuth("/api/users")
             setUsers(list?.users || [])
@@ -135,16 +156,44 @@ export default function UsersManager({ initialUsers }) {
         }
     }
 
+    // ⬇️ RESET PASSWORD: passwordHash di-set dari AKUN (di backend yang melakukan hashing)
+    const resetPassword = async () => {
+        if (!openEdit) return
+        const u = userById(openEdit)
+        const akun = u?.akun || ""
+        const ok = confirm(`Reset password user "${akun}" menjadi sama dengan akun?`)
+        if (!ok) return
+
+        setResetting(true)
+        setError("")
+        try {
+            await apiAuth(`/api/users/${openEdit}/reset-password`, {
+                method: "POST",
+            })
+            alert(`Password berhasil di-reset (password = ${akun}).`)
+        } catch (err) {
+            setError(err.message)
+        } finally {
+            setResetting(false)
+        }
+    }
+
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold">Kelola Pengguna</h1>
+
                 <Dialog open={openNew} onOpenChange={setOpenNew}>
                     <DialogTrigger asChild>
-                        <Button><UserPlus className="h-4 w-4 mr-2" /> Pengguna Baru</Button>
+                        <Button>
+                            <UserPlus className="h-4 w-4 mr-2" /> Pengguna Baru
+                        </Button>
                     </DialogTrigger>
+
                     <DialogContent className="max-w-6xl">
-                        <DialogHeader><DialogTitle>Tambah Pengguna</DialogTitle></DialogHeader>
+                        <DialogHeader>
+                            <DialogTitle>Tambah Pengguna</DialogTitle>
+                        </DialogHeader>
 
                         {error && (
                             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -156,63 +205,100 @@ export default function UsersManager({ initialUsers }) {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-2">
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="akun">Akun</Label>
-                                    <Input id="akun" value={f.akun} onChange={e=>setF(s=>({...s, akun:e.target.value}))} required />
+                                    <Input
+                                        id="akun"
+                                        value={f.akun}
+                                        onChange={(e) => setF((s) => ({ ...s, akun: e.target.value }))}
+                                        required
+                                    />
                                 </div>
+
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="email">Email</Label>
-                                    <Input id="email" type="email" value={f.email} onChange={e=>setF(s=>({...s, email:e.target.value}))} required />
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={f.email}
+                                        onChange={(e) => setF((s) => ({ ...s, email: e.target.value }))}
+                                        required
+                                    />
                                 </div>
+
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="noHp">No HP</Label>
-                                    <Input id="noHp" value={f.noHp} onChange={e=>setF(s=>({...s, noHp:e.target.value}))} required />
+                                    <Input
+                                        id="noHp"
+                                        value={f.noHp}
+                                        onChange={(e) => setF((s) => ({ ...s, noHp: e.target.value }))}
+                                        required
+                                    />
                                 </div>
+
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="nama">Nama</Label>
-                                    <Input id="nama" value={f.nama} onChange={e=>setF(s=>({...s, nama:e.target.value}))} />
+                                    <Input id="nama" value={f.nama} onChange={(e) => setF((s) => ({ ...s, nama: e.target.value }))} />
                                 </div>
+
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="bagian">Bagian</Label>
-                                    <Input id="bagian" value={f.bagian} onChange={e=>setF(s=>({...s, bagian:e.target.value}))} />
+                                    <Input
+                                        id="bagian"
+                                        value={f.bagian}
+                                        onChange={(e) => setF((s) => ({ ...s, bagian: e.target.value }))}
+                                    />
                                 </div>
+
                                 <div className="grid gap-1.5">
                                     <div className="flex justify-between items-center gap-1">
                                         <div className="grid gap-1.5">
                                             <Label>Role</Label>
-                                            <Select value={f.role} onValueChange={v=>setF(s=>({...s, role:v}))}>
-                                                <SelectTrigger><SelectValue placeholder="Pilih role" /></SelectTrigger>
+                                            <Select value={f.role} onValueChange={(v) => setF((s) => ({ ...s, role: v }))}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Pilih role" />
+                                                </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="user">user</SelectItem>
                                                     <SelectItem value="admin">admin</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
+
                                         <div className="grid gap-1.5 sm:col-span-2">
                                             <Label htmlFor="aktif">Status</Label>
                                             <div className="flex items-center gap-3">
-                                                <Switch id="aktif" checked={f.aktif} onCheckedChange={(v)=>setF(s=>({...s, aktif:v}))} />
+                                                <Switch id="aktif" checked={f.aktif} onCheckedChange={(v) => setF((s) => ({ ...s, aktif: v }))} />
                                                 <span className="text-sm">{f.aktif ? "Aktif" : "Nonaktif"}</span>
                                             </div>
                                         </div>
                                     </div>
-
                                 </div>
+
                                 <div className="grid gap-1.5 sm:col-span-2">
                                     <Label htmlFor="password">Password (min 8)</Label>
-                                    <Input id="password" type="password" value={f.password} onChange={e=>setF(s=>({...s, password:e.target.value}))} required />
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        value={f.password}
+                                        onChange={(e) => setF((s) => ({ ...s, password: e.target.value }))}
+                                        required
+                                    />
                                 </div>
-                                {/* Status aktif saat create */}
-
                             </div>
 
                             <Separator />
+
                             <div>
                                 <Label className="text-sm font-medium mb-2 block">Akses Menu</Label>
-                                <AccessEditor value={f.akses} onChange={(akses)=>setF(s=>({...s, akses}))} />
+                                <AccessEditor value={f.akses} onChange={(akses) => setF((s) => ({ ...s, akses }))} />
                             </div>
 
                             <div className="flex gap-2 justify-end pt-2">
-                                <Button type="button" variant="ghost" onClick={()=>setOpenNew(false)}>Batal</Button>
-                                <Button type="submit" disabled={creating}>{creating ? "Menyimpan..." : "Simpan"}</Button>
+                                <Button type="button" variant="ghost" onClick={() => setOpenNew(false)}>
+                                    Batal
+                                </Button>
+                                <Button type="submit" disabled={creating}>
+                                    {creating ? "Menyimpan..." : "Simpan"}
+                                </Button>
                             </div>
                         </form>
                     </DialogContent>
@@ -225,8 +311,9 @@ export default function UsersManager({ initialUsers }) {
                 </CardHeader>
                 <CardContent className="space-y-2">
                     {users.length === 0 && <p className="text-sm text-muted-foreground">Belum ada pengguna.</p>}
+
                     <div className="divide-y">
-                        {users.map(u => (
+                        {users.map((u) => (
                             <div key={u.id} className="py-3 flex items-center gap-3">
                                 <div className="min-w-0 flex-1">
                                     <div className="font-medium truncate">{u.nama || u.akun || u.email}</div>
@@ -234,21 +321,25 @@ export default function UsersManager({ initialUsers }) {
                                         {u.email} • {u.akun} • {u.role} • {u.aktif ? "Aktif" : "Nonaktif"}
                                     </div>
                                 </div>
-                                <Dialog open={openEdit === u.id} onOpenChange={(v)=> v ? openEditFor(u.id) : setOpenEdit(null)}>
+
+                                <Dialog open={openEdit === u.id} onOpenChange={(v) => (v ? openEditFor(u.id) : setOpenEdit(null))}>
                                     <DialogTrigger asChild>
-                                        <Button size="sm" variant="outline"><Settings2 className="h-4 w-4 mr-2" />Edit Akses</Button>
+                                        <Button size="sm" variant="outline">
+                                            <Settings2 className="h-4 w-4 mr-2" />
+                                            Edit Akses
+                                        </Button>
                                     </DialogTrigger>
+
                                     <DialogContent className="max-w-6xl">
-                                        <DialogHeader><DialogTitle>Edit: {u.nama || u.akun}</DialogTitle></DialogHeader>
+                                        <DialogHeader>
+                                            <DialogTitle>Edit: {u.nama || u.akun}</DialogTitle>
+                                        </DialogHeader>
 
                                         {error && (
                                             <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                                                 {error}
                                             </div>
                                         )}
-
-                                        {/* Status aktif saat edit */}
-
 
                                         <Separator className="my-0.5" />
 
@@ -262,13 +353,21 @@ export default function UsersManager({ initialUsers }) {
                                                     <span className="text-sm">{editAktif ? "Aktif" : "Nonaktif"}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2 justify-end pt-2">
-                                                <Button type="button" variant="ghost" onClick={()=>setOpenEdit(null)}>Batal</Button>
-                                                <Button onClick={saveAccess} disabled={updating}>{updating ? "Menyimpan..." : "Simpan"}</Button>
+
+                                            <div className="flex gap-2 justify-end pt-2 items-end">
+                                                {/* ⬇️ BUTTON RESET PASSWORD */}
+                                                <Button type="button" variant="destructive" onClick={resetPassword} disabled={resetting}>
+                                                    {resetting ? "Mereset..." : "Reset Password"}
+                                                </Button>
+
+                                                <Button type="button" variant="ghost" onClick={() => setOpenEdit(null)}>
+                                                    Batal
+                                                </Button>
+                                                <Button onClick={saveAccess} disabled={updating}>
+                                                    {updating ? "Menyimpan..." : "Simpan"}
+                                                </Button>
                                             </div>
                                         </div>
-
-
                                     </DialogContent>
                                 </Dialog>
                             </div>

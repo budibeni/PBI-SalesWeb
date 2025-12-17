@@ -83,7 +83,7 @@ export default function FooterPage({
 
             let value = 0;
 
-            if (ach > minAch) {
+            if (ach >= minAch) {
                 if (ach <= 1) {
                     // minAchKomisiDasar < Achievement ≤ 1
                     value = pers * ach * margin;

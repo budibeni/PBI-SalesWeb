@@ -127,7 +127,7 @@ export default function AppSidebarLayout({ children, user }) {
                                 <Button variant="ghost" className="flex flex-1 items-center gap-2 cursor-pointer">
                                     <User className="h-4 w-4" />
                                     <span
-                                        className="hidden md:inline font-medium truncate max-w-[160px]"
+                                        className="inline font-medium truncate max-w-[160px]"
                                         title={displayName}
                                     >
                     {displayName}
