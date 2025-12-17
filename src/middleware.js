@@ -12,7 +12,7 @@ const PUBLIC_PATHS = [
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/logout",
-    "/api/me",          // ⬅️ penting
+    "/api/me",          // tetap public agar client bisa panggil
     "/api/public",
     "/artikel/terbit",
     "/baca",
@@ -24,13 +24,10 @@ const PUBLIC_PATHS = [
     "/images",
 ]
 
-/* ===========================
-   Utils
-=========================== */
-
+// === Utils ===
 function isPublicPath(pathname) {
     if (isPublicByAccessItems(pathname)) return true
-    return PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + "/"))
+    return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
 }
 
 function asBool(v) {
@@ -51,7 +48,7 @@ function normalizeAkses(raw) {
             if (parsed && typeof parsed === "object") return parsed
         } catch {}
     }
-    return null
+    return {}
 }
 
 function redirectToLogin(req, pathname, search, message) {
@@ -64,43 +61,14 @@ function redirectToLogin(req, pathname, search, message) {
     return res
 }
 
-/* ===========================
-   REALTIME USER (NO TIMEOUT)
-   IIS SAFE
-=========================== */
-
-async function resolveMe(req) {
-    try {
-        const res = await fetch(new URL("/api/me", req.url), {
-            headers: {
-                cookie: req.headers.get("cookie") || "",
-                "cache-control": "no-store",
-            },
-        }).catch(() => null)
-
-        if (!res || !res.ok) return undefined
-        return await res.json().catch(() => undefined)
-    } catch {
-        return undefined
-    }
-}
-
-/* ===========================
-   JWT SETUP
-=========================== */
-
 const rawSecret = process.env.JWT_SECRET || ""
 const secret = rawSecret ? new TextEncoder().encode(rawSecret) : null
-
-/* ===========================
-   MIDDLEWARE
-=========================== */
 
 export async function middleware(req) {
     const { pathname, search } = req.nextUrl
     const token = req.cookies.get("session")?.value
 
-    /* ---- PUBLIC PATH ---- */
+    // 0) Public path
     if (isPublicPath(pathname)) {
         if (pathname.startsWith("/login") && token && secret) {
             try {
@@ -115,36 +83,28 @@ export async function middleware(req) {
         return NextResponse.next()
     }
 
-    /* ---- TOKEN REQUIRED ---- */
-    if (!token || !secret) {
-        return redirectToLogin(req, pathname, search)
-    }
+    // 1) Wajib token
+    if (!token) return redirectToLogin(req, pathname, search)
+    if (!secret) return redirectToLogin(req, pathname, search)
 
-    /* ---- VERIFY JWT ---- */
-    let payload
+    // 2) Verify JWT
+    let payload = null
     try {
-        const v = await jwtVerify(token, secret)
-        payload = v.payload
+        const { payload: p } = await jwtVerify(token, secret)
+        payload = p
     } catch {
         return redirectToLogin(req, pathname, search)
     }
 
+    // 3) Blokir non-aktif (kecuali super)
     const akun = (payload?.akun || "").toLowerCase()
     const isBypass = akun === SUPER_ACCOUNT
-
-    /* ---- AKTIF DARI TOKEN ---- */
-    if (!isBypass && !asBool(payload?.aktif)) {
+    const aktifFromToken = asBool(payload?.aktif)
+    if (!isBypass && !aktifFromToken) {
         return redirectToLogin(req, pathname, search, "Akun dinonaktifkan")
     }
 
-    /* ---- REALTIME CHECK (DB) ---- */
-    const me = await resolveMe(req)
-
-    if (!isBypass && me?.aktif === false) {
-        return redirectToLogin(req, pathname, search, "Akun dinonaktifkan")
-    }
-
-    /* ---- ACCESS CHECK ---- */
+    // 4) Cek akses untuk route protected
     const accessId = getAccessIdByPath(pathname)
     if (!accessId) return NextResponse.next()
 
@@ -152,15 +112,16 @@ export async function middleware(req) {
         return NextResponse.next()
     }
 
-    const akses = normalizeAkses(me?.akses) || {}
+    // ✅ AKSES DIAMBIL DARI JWT (bukan /api/me)
+    const akses = normalizeAkses(payload?.akses)
     const allowed = asBool(akses?.[accessId])
 
     if (!allowed) {
         if (pathname.startsWith("/api/")) {
-            return new NextResponse(
-                JSON.stringify({ error: "Forbidden" }),
-                { status: 403, headers: { "content-type": "application/json" } }
-            )
+            return new NextResponse(JSON.stringify({ error: "Forbidden" }), {
+                status: 403,
+                headers: { "content-type": "application/json" },
+            })
         }
         const url = new URL("/forbidden", req.url)
         url.searchParams.set("m", accessId)
@@ -170,6 +131,4 @@ export async function middleware(req) {
     return NextResponse.next()
 }
 
-export const config = {
-    matcher: ["/:path*"],
-}
+export const config = { matcher: ["/:path*"] }

@@ -8,7 +8,7 @@ import { signUserJwt } from "@/lib/jwt"
 
 const isProd = process.env.NODE_ENV === "production"
 const COOKIE_NAME = "session"
-const SUPER_ACCOUNT = "budibeni" // bypass non-aktif khusus akun ini
+const SUPER_ACCOUNT = "budibeni"
 
 function makeSessionCookie(token) {
     return {
@@ -23,27 +23,21 @@ function makeSessionCookie(token) {
 
 function isFormContentType(ct = "") {
     ct = ct.toLowerCase()
-    return (
-        ct.includes("application/x-www-form-urlencoded") ||
-        ct.includes("multipart/form-data")
-    )
+    return ct.includes("application/x-www-form-urlencoded") || ct.includes("multipart/form-data")
 }
 
-// 🔑 Ambil origin yang dipakai browser (prioritaskan proxy headers / Origin)
 function getOrigin(req) {
     const h = req.headers
     const xfProto = h.get("x-forwarded-proto")
-    const xfHost  = h.get("x-forwarded-host")
+    const xfHost = h.get("x-forwarded-host")
     if (xfProto && xfHost) return `${xfProto}://${xfHost}`
 
     const origin = h.get("origin")
     if (origin) return origin
 
-    // fallback terakhir: dari req.url (bisa "localhost" di sebagian setup dev)
     return new URL(req.url).origin
 }
 
-// helper buat bikin absolute URL dari path relatif + query
 function absUrlFromOrigin(origin, path, query = {}) {
     const u = new URL(path, origin)
     for (const [k, v] of Object.entries(query)) {
@@ -56,20 +50,19 @@ export async function POST(req) {
     const ct = req.headers.get("content-type") || ""
     try {
         let identifier, password
-        const SAFE_REDIRECT = "/"           // tujuan sukses
-        const origin = getOrigin(req)       // <<— kunci anti "localhost"
+        const SAFE_REDIRECT = "/"
+        const origin = getOrigin(req)
 
         if (isFormContentType(ct)) {
             const form = await req.formData()
             identifier = form.get("identifier")?.toString().trim()
-            password   = form.get("password")?.toString()
+            password = form.get("password")?.toString()
         } else {
             const body = await req.json().catch(() => ({}))
             identifier = body.identifier?.toString().trim()
-            password   = body.password?.toString()
+            password = body.password?.toString()
         }
 
-        // helper error utk FORM → redirect balik ke /login (absolute via origin)
         const returnFormError = (msg) => {
             return NextResponse.redirect(
                 absUrlFromOrigin(origin, "/login", {
@@ -89,8 +82,14 @@ export async function POST(req) {
         const user = await prisma.tbUser.findFirst({
             where: { OR: [{ email: identifier }, { akun: identifier }] },
             select: {
-                id: true, akun: true, email: true, nama: true, role: true,
-                passwordHash: true, aktif: true,
+                id: true,
+                akun: true,
+                email: true,
+                nama: true,
+                role: true,
+                passwordHash: true,
+                aktif: true,
+                akses: true, // ✅ ambil akses dari DB
             },
         })
 
@@ -119,11 +118,13 @@ export async function POST(req) {
             if (isFormContentType(ct)) return returnFormError(isProd ? "Kredensial tidak valid" : "Hash password tidak valid")
             return NextResponse.json({ error: isProd ? "Kredensial tidak valid" : "Hash password tidak valid" }, { status: 400 })
         }
+
         if (!ok) {
             if (isFormContentType(ct)) return returnFormError("Password salah")
             return NextResponse.json({ error: "Password salah" }, { status: 401 })
         }
 
+        // ✅ MASUKKAN AKSES KE JWT
         const token = await signUserJwt({
             sub: String(user.id),
             email: user.email,
@@ -131,16 +132,15 @@ export async function POST(req) {
             role: user.role,
             nama: user.nama || null,
             aktif: user.aktif ?? true,
+            akses: user.akses ?? {}, // ✅ ini kunci agar middleware tidak perlu /api/me
         })
 
-        // FORM submit → Redirect 303 ke "/" (absolute menggunakan origin dari header)
         if (isFormContentType(ct)) {
             const res = NextResponse.redirect(absUrlFromOrigin(origin, SAFE_REDIRECT), 303)
             res.cookies.set(makeSessionCookie(token))
             return res
         }
 
-        // JSON submit → balikan path saja; klien yang navigate (origin tetap milik klien)
         const res = NextResponse.json({ success: true, redirect: SAFE_REDIRECT })
         res.cookies.set(makeSessionCookie(token))
         return res
@@ -148,10 +148,7 @@ export async function POST(req) {
         console.error("LOGIN ERROR:", err)
         const origin = getOrigin(req)
         if (isFormContentType(ct)) {
-            return NextResponse.redirect(
-                absUrlFromOrigin(origin, "/login", { error: "Terjadi kesalahan" }),
-                303
-            )
+            return NextResponse.redirect(absUrlFromOrigin(origin, "/login", { error: "Terjadi kesalahan" }), 303)
         }
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
     }
