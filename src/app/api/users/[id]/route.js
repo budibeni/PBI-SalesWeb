@@ -77,6 +77,7 @@ export async function PATCH(req, { params }) {
         // nama/bagian/noHp/email (opsional)
         if (body.nama !== undefined) data.nama = body.nama || null
         if (body.bagian !== undefined) data.bagian = body.bagian || null
+        if (body.kategori !== undefined) data.kategori = body.kategori || null
         if (body.noHp !== undefined) data.noHp = body.noHp || null
         if (body.email !== undefined) {
             const email = body.email || null
@@ -111,6 +112,7 @@ export async function PATCH(req, { params }) {
                 noHp: true,
                 nama: true,
                 bagian: true,
+                kategori: true,
                 role: true,
                 akses: true,
                 aktif: true,

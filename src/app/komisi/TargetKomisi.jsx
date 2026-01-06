@@ -40,7 +40,6 @@ function computeTargets({ expand, targetKomisi }) {
     let totalNominal = 0
     let totalPercent = 0
 
-    // jika expand = false, hitung sekilas agar caption tetap informatif
     if (!expand) {
         if (forcedMode === "Rp.") {
             for (const [kat, raw] of Object.entries(valuePerKategori || {})) {
@@ -138,11 +137,26 @@ export default function TargetKomisi({
                                          onChangeTargetKomisi,
                                          customer,
                                          setCustomer,
-                                         masterKomisiSelected,       // 🔹 data master komisi per customer (dari Page)
+                                         masterKomisiSelected,
+                                         jwtKategori, // ✅ NEW: kategori dari JWT: "ALL" | "PROJECT" | "RETAIL"
                                      }) {
     const [expand, setExpand] = React.useState(false)
 
-    // 🔹 Daftar kategori berdasarkan masterKomisiSelected (bukan useKategori lagi)
+    const jwtKat = String(jwtKategori ?? "ALL").toUpperCase()
+    const allowChooseCustomer = jwtKat === "ALL"
+
+    // ✅ kalau jwtKategori bukan ALL, paksa customer sesuai jwt
+    React.useEffect(() => {
+        if (!setCustomer) return
+        if (!allowChooseCustomer) {
+            if (customer !== jwtKat) setCustomer(jwtKat)
+        } else {
+            // jika ALL tapi customer kosong, defaultkan PROJECT (boleh kamu ubah jadi RETAIL)
+            if (!isFilled(customer)) setCustomer("PROJECT")
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allowChooseCustomer, jwtKat])
+
     const kategoriList = React.useMemo(
         () =>
             Array.isArray(masterKomisiSelected)
@@ -219,17 +233,33 @@ export default function TargetKomisi({
                 <div className="w-full sm:w-36">
                     <Select
                         value={customer}
-                        onValueChange={(val) => setCustomer?.(val)}
+                        onValueChange={(val) => {
+                            if (jwtKat !== "ALL" && val !== jwtKat) return
+                            setCustomer?.(val)
+                        }}
                     >
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih Customer" />
                         </SelectTrigger>
+
                         <SelectContent>
-                            <SelectItem value="PROJECT">PROJECT</SelectItem>
-                            <SelectItem value="RETAIL">RETAIL</SelectItem>
+                            <SelectItem
+                                value="PROJECT"
+                                disabled={jwtKat !== "ALL" && jwtKat !== "PROJECT"}
+                            >
+                                PROJECT
+                            </SelectItem>
+
+                            <SelectItem
+                                value="RETAIL"
+                                disabled={jwtKat !== "ALL" && jwtKat !== "RETAIL"}
+                            >
+                                RETAIL
+                            </SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
+
 
                 {/* Global input */}
                 <div className="w-full">
@@ -266,7 +296,6 @@ export default function TargetKomisi({
                 </div>
             </div>
 
-            {/* === Caption ketika collapsed === */}
             {!expand && (
                 <div className="text-xs text-muted-foreground mt-1">
                     {calc.forcedMode === "%" ? (
@@ -286,19 +315,11 @@ export default function TargetKomisi({
                                 <div>
                                     Total Persentase:{" "}
                                     <b>
-                                        {fmt(
-                                            calc.totalPercent * 100,
-                                            2
-                                        )}
-                                        %
+                                        {fmt(calc.totalPercent * 100, 2)}%
                                     </b>{" "}
                                     • Sisa:{" "}
                                     <b>
-                                        {fmt(
-                                            calc.remainingPct * 100,
-                                            2
-                                        )}
-                                        %
+                                        {fmt(calc.remainingPct * 100, 2)}%
                                     </b>{" "}
                                     (Rp.{" "}
                                     <b>{fmt(calc.remainingNominal)}</b>)
@@ -334,7 +355,6 @@ export default function TargetKomisi({
                 </div>
             )}
 
-            {/* === Detail ketika expand === */}
             {expand && (
                 <div className="space-y-3 mt-4">
                     <div className="flex justify-between items-center">
@@ -355,18 +375,15 @@ export default function TargetKomisi({
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                         {kategoriList.map((kat) => {
-                            const raw =
-                                targetKomisi?.perKategori?.[kat] ?? ""
-                            const nominal =
-                                calc.perKategoriNominal[kat] ?? 0
+                            const raw = targetKomisi?.perKategori?.[kat] ?? ""
+                            const nominal = calc.perKategoriNominal[kat] ?? 0
                             const info =
                                 calc.forcedMode === "%"
                                     ? `= Rp. ${fmt(nominal)}`
                                     : (() => {
                                         const pct =
                                             totalKategori > 0
-                                                ? (nominal /
-                                                    totalKategori) *
+                                                ? (nominal / totalKategori) *
                                                 100
                                                 : 0
                                         return `= ${fmt(pct, 2)}%`
@@ -383,14 +400,10 @@ export default function TargetKomisi({
                                     <NumericInput
                                         fixedDecimalScale={false}
                                         decimalScale={
-                                            calc.forcedMode === "%"
-                                                ? 2
-                                                : 0
+                                            calc.forcedMode === "%" ? 2 : 0
                                         }
                                         value={raw}
-                                        onValue={(v) =>
-                                            setPerKat(kat, v)
-                                        }
+                                        onValue={(v) => setPerKat(kat, v)}
                                         inputMode="decimal"
                                     />
                                     <div className="text-xs text-muted-foreground">

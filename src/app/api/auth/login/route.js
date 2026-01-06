@@ -87,9 +87,10 @@ export async function POST(req) {
                 email: true,
                 nama: true,
                 role: true,
+                kategori: true, // ✅ tambah ini
                 passwordHash: true,
                 aktif: true,
-                akses: true, // ✅ ambil akses dari DB
+                akses: true,
             },
         })
 
@@ -124,12 +125,13 @@ export async function POST(req) {
             return NextResponse.json({ error: "Password salah" }, { status: 401 })
         }
 
-        // ✅ MASUKKAN AKSES KE JWT
+        // ✅ MASUKKAN AKSES + KATEGORI KE JWT
         const token = await signUserJwt({
             sub: String(user.id),
             email: user.email,
             akun: user.akun,
             role: user.role,
+            kategori: user.kategori || "ALL", // ✅ tambah ini (default ALL)
             nama: user.nama || null,
             aktif: user.aktif ?? true,
             akses: user.akses ?? {}, // ✅ ini kunci agar middleware tidak perlu /api/me

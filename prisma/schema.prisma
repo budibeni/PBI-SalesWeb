@@ -16,6 +16,7 @@ model TbUser {
   passwordHash  String
   role          String   @default("user")
   akses         Json?
+  kategori      String?
   bagian        String?
   downline      Json?
   upline        Json?

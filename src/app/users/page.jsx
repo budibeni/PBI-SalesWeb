@@ -20,7 +20,7 @@ export default async function UsersPage() {
         orderBy: { dibuatTanggal: "desc" },
         select: {
             id: true, akun: true, email: true, noHp: true, nama: true,
-            bagian: true, role: true, akses: true, aktif: true, // ⬅️ aktif
+            bagian: true, kategori:true, role: true, akses: true, aktif: true,
         },
     })
 

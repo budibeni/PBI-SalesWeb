@@ -25,7 +25,7 @@ export default async function RootLayout({ children }) {
         // ⬇️ ambil user dari DB (lengkap dengan akses)
         user = await prisma.tbUser.findUnique({
             where: { id: Number(session.sub) },
-            select: { id: true, nama: true, akun: true, email: true, role: true, akses: true },
+            select: { id: true, nama: true, akun: true, email: true, kategori:true, role: true, akses: true },
         })
         if (user && (user.akses == null || typeof user.akses !== "object")) {
             user.akses = {}

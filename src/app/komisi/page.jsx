@@ -16,19 +16,24 @@ import { useKategori } from "@/providers/KategoriProvider"
 const CAT_ALL = "__ALL__"
 const j = (v) => JSON.stringify(v ?? null)
 
+const normKat = (v) => String(v ?? "").trim().toUpperCase()
+
 export default function Page() {
     const { ready, loading, items, refresh } = useItems()
     const user = useUser()
+
     const isAdmin = user?.role === "admin"
+    const jwtKategori = isAdmin ? "ALL" : normKat(user?.kategori || "ALL")
+    const [customer, setCustomer] = React.useState(
+        jwtKategori === "ALL" ? "RETAIL" : jwtKategori
+    )
 
     const [idSimulasi, setIdSimulasi] = React.useState(null)
-    const [customer, setCustomer] = React.useState("RETAIL")
     const [judulSimulasi, setJudulSimulasi] = React.useState("")
     const [rows, setRows] = React.useState([])
 
     const [targetKomisi, setTargetKomisi] = React.useState({ global: "", perKategori: {} })
 
-    // ✅ hanya pakai array detail (AchRow[])
     const [achievementRows, setAchievementRows] = React.useState([])
     const setAchievementRowsSafe = React.useCallback((next) => {
         setAchievementRows((prev) => (j(prev) === j(next) ? prev : next))
@@ -37,6 +42,12 @@ export default function Page() {
     const [showAchTarget, setShowAchTarget] = React.useState(false)
     const [marginKategori, setMarginKategori] = React.useState(0)
     const [selectedCat, setSelectedCat] = React.useState(CAT_ALL)
+
+    React.useEffect(() => {
+        if (jwtKategori !== "ALL") {
+            setCustomer(jwtKategori)
+        }
+    }, [jwtKategori])
 
     const { items: masterKomisiRaw } = useKategori()
     const masterKomisiSelected = React.useMemo(() => {
@@ -56,7 +67,6 @@ export default function Page() {
         bonusExtraPerKategori: {},
         subtotalTotal: 0,
     })
-
 
     React.useEffect(() => {
         if (!Array.isArray(masterKomisiSelected)) return
@@ -88,7 +98,6 @@ export default function Page() {
         })
     }, [masterKomisiSelected])
 
-    // --- dialog & print ---
     const [saving, setSaving] = React.useState(false)
     const [showDialog, setShowDialog] = React.useState(false)
     const [listData, setListData] = React.useState([])
@@ -101,7 +110,6 @@ export default function Page() {
         documentTitle: "Simulasi Komisi",
     })
 
-    // 🧹 Reset semua
     const resetAll = React.useCallback(() => {
         setIdSimulasi(null)
         setJudulSimulasi("")
@@ -122,13 +130,11 @@ export default function Page() {
         })
     }, [])
 
-    // mapping cepat item by id
     const itemById = React.useMemo(() => {
         const m = new Map((items || []).map((it) => [it.id, it]))
         return (id) => m.get(id)
     }, [items])
 
-    // Picker item
     const onPick = (rowBaru) => {
         if (!rowBaru) return
         setRows((prev) => (prev.some((r) => r.id === rowBaru.id) ? prev : [...prev, rowBaru]))
@@ -137,7 +143,6 @@ export default function Page() {
     const onChangeRow = (id, patch) =>
         setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
-    // Payload builder (API sudah pakai struktur baru)
     const buildPayload = React.useCallback(() => {
         const tgRaw = String(targetKomisi?.global ?? "").trim()
         const targetGlobal = tgRaw ? Number(tgRaw) : null
@@ -190,7 +195,6 @@ export default function Page() {
         }
     }, [judulSimulasi, customer, targetKomisi, achievementRows, summary, rows, itemById])
 
-    // Simpan baru / update
     const handleSave = async () => {
         if (!rows.length) return alert("Belum ada data untuk disimpan.")
         if (!idSimulasi) setShowDialog(true)
@@ -221,7 +225,6 @@ export default function Page() {
         }
     }
 
-    // List & detail
     const loadList = async () => {
         try {
             const res = await fetch("/api/komisi")
@@ -242,7 +245,11 @@ export default function Page() {
             const d = json.data
             setIdSimulasi(d.id)
             setJudulSimulasi(d.judul || "")
-            setCustomer((d.customer || "RETAIL").toUpperCase())
+
+            // ✅ kalau jwtKategori bukan ALL, jangan izinkan detail mengubah customer
+            const detailCustomer = (d.customer || "RETAIL").toUpperCase()
+            setCustomer(jwtKategori === "ALL" ? detailCustomer : jwtKategori)
+
             setTargetKomisi({
                 global: String(d.targetGlobal ?? ""),
                 perKategori: d.targetKategori || {},
@@ -268,7 +275,6 @@ export default function Page() {
         }
     }
 
-    // 🔹 Cetak
     const handlePrint = async (id) => {
         try {
             const res = await fetch(`/api/komisi/${id}`)
@@ -311,6 +317,7 @@ export default function Page() {
                 customer={customer}
                 setCustomer={setCustomer}
                 masterKomisiSelected={masterKomisiSelected}
+                jwtKategori={jwtKategori}
             />
 
             <TableProduk

@@ -80,10 +80,9 @@ export default function UsersManager({ initialUsers }) {
     const [openEdit, setOpenEdit] = useState(null)
     const [creating, setCreating] = useState(false)
     const [updating, setUpdating] = useState(false)
-    const [resetting, setResetting] = useState(false) // ⬅️ tambah
+    const [resetting, setResetting] = useState(false)
     const [error, setError] = useState("")
 
-    // form create
     const [f, setF] = useState({
         akun: "",
         email: "",
@@ -91,6 +90,7 @@ export default function UsersManager({ initialUsers }) {
         nama: "",
         bagian: "",
         role: "user",
+        kategori: "ALL",
         password: "",
         akses: defaultAccess(false),
         aktif: true,
@@ -103,11 +103,17 @@ export default function UsersManager({ initialUsers }) {
         try {
             await apiAuth("/api/users", {
                 method: "POST",
-                body: { ...f, akses: f.akses, aktif: f.aktif },
+                body: {
+                    ...f,
+                    kategori: f.kategori || "ALL",
+                    akses: f.akses,
+                    aktif: f.aktif,
+                },
             })
             const list = await apiAuth("/api/users")
             setUsers(list?.users || [])
             setOpenNew(false)
+
             setF({
                 akun: "",
                 email: "",
@@ -115,6 +121,7 @@ export default function UsersManager({ initialUsers }) {
                 nama: "",
                 bagian: "",
                 role: "user",
+                kategori: "ALL",
                 password: "",
                 akses: defaultAccess(false),
                 aktif: true,
@@ -156,7 +163,6 @@ export default function UsersManager({ initialUsers }) {
         }
     }
 
-    // ⬇️ RESET PASSWORD: passwordHash di-set dari AKUN (di backend yang melakukan hashing)
     const resetPassword = async () => {
         if (!openEdit) return
         const u = userById(openEdit)
@@ -167,9 +173,7 @@ export default function UsersManager({ initialUsers }) {
         setResetting(true)
         setError("")
         try {
-            await apiAuth(`/api/users/${openEdit}/reset-password`, {
-                method: "POST",
-            })
+            await apiAuth(`/api/users/${openEdit}/reset-password`, { method: "POST" })
             alert(`Password berhasil di-reset (password = ${akun}).`)
         } catch (err) {
             setError(err.message)
@@ -204,7 +208,7 @@ export default function UsersManager({ initialUsers }) {
                         <form className="grid gap-4" onSubmit={createUser}>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-2">
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="akun">Akun</Label>
+                                    <Label htmlFor="akun">Akun *</Label>
                                     <Input
                                         id="akun"
                                         value={f.akun}
@@ -214,7 +218,7 @@ export default function UsersManager({ initialUsers }) {
                                 </div>
 
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="email">Email</Label>
+                                    <Label htmlFor="email">Email *</Label>
                                     <Input
                                         id="email"
                                         type="email"
@@ -225,9 +229,11 @@ export default function UsersManager({ initialUsers }) {
                                 </div>
 
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="noHp">No HP</Label>
+                                    <Label htmlFor="noHp">No HP *</Label>
                                     <Input
                                         id="noHp"
+                                        type="tel"
+                                        placeholder="08xxxxxxxxxx"
                                         value={f.noHp}
                                         onChange={(e) => setF((s) => ({ ...s, noHp: e.target.value }))}
                                         required
@@ -236,7 +242,11 @@ export default function UsersManager({ initialUsers }) {
 
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="nama">Nama</Label>
-                                    <Input id="nama" value={f.nama} onChange={(e) => setF((s) => ({ ...s, nama: e.target.value }))} />
+                                    <Input
+                                        id="nama"
+                                        value={f.nama}
+                                        onChange={(e) => setF((s) => ({ ...s, nama: e.target.value }))}
+                                    />
                                 </div>
 
                                 <div className="grid gap-1.5">
@@ -249,11 +259,45 @@ export default function UsersManager({ initialUsers }) {
                                 </div>
 
                                 <div className="grid gap-1.5">
-                                    <div className="flex justify-between items-center gap-1">
+                                    <Label>Kategori</Label>
+                                    <Select
+                                        value={f.kategori || "ALL"}
+                                        onValueChange={(v) => setF((s) => ({ ...s, kategori: v }))}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Pilih kategori" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="PROJECT">PROJECT</SelectItem>
+                                            <SelectItem value="RETAIL">RETAIL</SelectItem>
+                                            <SelectItem value="ALL">ALL</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="grid gap-1.5">
+                                    <Label htmlFor="password">Password</Label>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        minLength={3}
+                                        value={f.password}
+                                        onChange={(e) => setF((s) => ({ ...s, password: e.target.value }))}
+                                        required
+                                    />
+                                </div>
+
+
+                                <div className="grid gap-1.5">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {/* ROLE */}
                                         <div className="grid gap-1.5">
                                             <Label>Role</Label>
-                                            <Select value={f.role} onValueChange={(v) => setF((s) => ({ ...s, role: v }))}>
-                                                <SelectTrigger>
+                                            <Select
+                                                value={f.role}
+                                                onValueChange={(v) => setF((s) => ({ ...s, role: v }))}
+                                            >
+                                                <SelectTrigger className="w-full">
                                                     <SelectValue placeholder="Pilih role" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -263,26 +307,26 @@ export default function UsersManager({ initialUsers }) {
                                             </Select>
                                         </div>
 
-                                        <div className="grid gap-1.5 sm:col-span-2">
+                                        {/* STATUS */}
+                                        <div className="grid gap-1.5">
                                             <Label htmlFor="aktif">Status</Label>
-                                            <div className="flex items-center gap-3">
-                                                <Switch id="aktif" checked={f.aktif} onCheckedChange={(v) => setF((s) => ({ ...s, aktif: v }))} />
-                                                <span className="text-sm">{f.aktif ? "Aktif" : "Nonaktif"}</span>
+                                            <div className="flex items-center gap-3 h-10">
+                                                <Switch
+                                                    id="aktif"
+                                                    checked={f.aktif}
+                                                    onCheckedChange={(v) => setF((s) => ({ ...s, aktif: v }))}
+                                                />
+                                                <span className="text-sm">
+                                                    {f.aktif ? "Aktif" : "Nonaktif"}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid gap-1.5 sm:col-span-2">
-                                    <Label htmlFor="password">Password (min 8)</Label>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        value={f.password}
-                                        onChange={(e) => setF((s) => ({ ...s, password: e.target.value }))}
-                                        required
-                                    />
-                                </div>
+
+
+
                             </div>
 
                             <Separator />
@@ -318,7 +362,7 @@ export default function UsersManager({ initialUsers }) {
                                 <div className="min-w-0 flex-1">
                                     <div className="font-medium truncate">{u.nama || u.akun || u.email}</div>
                                     <div className="text-xs text-muted-foreground truncate">
-                                        {u.email} • {u.akun} • {u.role} • {u.aktif ? "Aktif" : "Nonaktif"}
+                                        {u.email} • {u.akun} • {u.role} • {(u.kategori || "ALL")} • {u.aktif ? "Aktif" : "Nonaktif"}
                                     </div>
                                 </div>
 
@@ -355,7 +399,6 @@ export default function UsersManager({ initialUsers }) {
                                             </div>
 
                                             <div className="flex gap-2 justify-end pt-2 items-end">
-                                                {/* ⬇️ BUTTON RESET PASSWORD */}
                                                 <Button type="button" variant="destructive" onClick={resetPassword} disabled={resetting}>
                                                     {resetting ? "Mereset..." : "Reset Password"}
                                                 </Button>

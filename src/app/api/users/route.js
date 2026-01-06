@@ -13,6 +13,8 @@ function requireAdmin(me) {
     }
 }
 
+const KATEGORI_ALLOWED = new Set(["PROJECT", "RETAIL", "ALL"])
+
 export async function GET() {
     try {
         const me = await getCurrentUser()
@@ -21,11 +23,20 @@ export async function GET() {
         const users = await prisma.tbUser.findMany({
             orderBy: { dibuatTanggal: "desc" },
             select: {
-                id: true, akun: true, email: true, noHp: true, nama: true,
-                bagian: true, role: true, akses: true, aktif: true, // ⬅️ aktif
+                id: true,
+                akun: true,
+                email: true,
+                noHp: true,
+                nama: true,
+                bagian: true,
+                kategori: true,
+                role: true,
+                akses: true,
+                aktif: true,
             },
         })
-        const data = users.map(u => ({ ...u, akses: normalizeAccess(u.akses) }))
+
+        const data = users.map((u) => ({ ...u, akses: normalizeAccess(u.akses) }))
         return NextResponse.json({ users: data })
     } catch (e) {
         if (e instanceof NextResponse) return e
@@ -45,27 +56,37 @@ export async function POST(req) {
             ? await req.json()
             : Object.fromEntries((await req.formData()).entries())
 
-        const akun     = body.akun?.toString().trim()
-        const email    = body.email?.toString().trim()
-        const noHp     = body.noHp?.toString().trim()
-        const nama     = body.nama?.toString().trim() || null
-        const bagian   = body.bagian?.toString().trim() || null
-        const role     = (body.role?.toString().trim() || "user").toLowerCase()
+        const akun = body.akun?.toString().trim()
+        const email = body.email?.toString().trim()
+
+        // ✅ noHp WAJIB (tetap unique di Prisma)
+        const noHp = body.noHp?.toString().trim()
+
+        const nama = body.nama?.toString().trim() || null
+        const bagian = body.bagian?.toString().trim() || null
+
+        // ✅ kategori: PROJECT | RETAIL | ALL (default ALL)
+        const kategoriRaw = body.kategori?.toString().trim()
+        const kategori = (kategoriRaw ? kategoriRaw.toUpperCase() : "ALL")
+
+        const role = (body.role?.toString().trim() || "user").toLowerCase()
         const password = body.password?.toString() || ""
 
-        // aktif: terima boolean/string; default true
+        // ✅ aktif: terima boolean/string; default true
         let aktif = body.aktif
         if (typeof aktif === "string") {
             aktif = ["true", "1", "on", "yes"].includes(aktif.toLowerCase())
         }
         if (typeof aktif !== "boolean") aktif = true
 
-        // akses: object atau string JSON
+        // ✅ akses: object atau string JSON
         let aksesRaw = body.akses
         let aksesParsed
         if (typeof aksesRaw === "string") {
             if (aksesRaw.trim() !== "") {
-                try { aksesParsed = JSON.parse(aksesRaw) } catch {
+                try {
+                    aksesParsed = JSON.parse(aksesRaw)
+                } catch {
                     return NextResponse.json({ error: "Field 'akses' harus JSON valid" }, { status: 400 })
                 }
             }
@@ -74,21 +95,44 @@ export async function POST(req) {
         }
         const akses = normalizeAccess(aksesParsed ?? defaultAccess(false))
 
+        // ✅ validasi wajib
         if (!akun || !email || !noHp || !password) {
-            return NextResponse.json({ error: "akun, email, noHp, password wajib" }, { status: 400 })
+            return NextResponse.json(
+                { error: "akun, email, noHp, dan password wajib" },
+                { status: 400 }
+            )
         }
-        if (password.length < 8) {
-            return NextResponse.json({ error: "Password minimal 8 karakter" }, { status: 422 })
+
+        // ✅ password minimal 3 (tanpa syarat angka/simbol)
+        if (password.length < 3) {
+            return NextResponse.json(
+                { error: "Password minimal 3 karakter" },
+                { status: 422 }
+            )
+        }
+
+        // ✅ validasi kategori
+        if (!KATEGORI_ALLOWED.has(kategori)) {
+            return NextResponse.json(
+                { error: "Kategori harus PROJECT, RETAIL, atau ALL" },
+                { status: 422 }
+            )
         }
 
         const passwordHash = await hashPassword(password)
 
         const created = await prisma.tbUser.create({
             data: {
-                akun, email, noHp, nama, bagian, role,
+                akun,
+                email,
+                noHp,
+                nama,
+                bagian,
+                kategori,
+                role,
                 passwordHash,
                 akses,
-                aktif, // ⬅️ simpan status
+                aktif,
                 dibuatOleh: me.email || me.akun || "system",
             },
             select: { id: true },
@@ -96,7 +140,8 @@ export async function POST(req) {
 
         return NextResponse.json({ success: true, id: created.id })
     } catch (e) {
-        if (e.code === "P2002") {
+        // prisma unique constraint
+        if (e?.code === "P2002") {
             return NextResponse.json({ error: "akun/email/noHp sudah terpakai" }, { status: 409 })
         }
         if (e instanceof NextResponse) return e

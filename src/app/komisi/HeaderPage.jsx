@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { BookmarkCheck, List, RefreshCcw, Save, Trash2 } from "lucide-react"
 import TargetKomisi from "./TargetKomisi"
 
-
 export default function HeaderPage({
                                        loading,
                                        ready,
@@ -21,6 +20,7 @@ export default function HeaderPage({
                                        customer,
                                        setCustomer,
                                        masterKomisiSelected,
+                                       jwtKategori, // ✅ NEW
                                    }) {
     return (
         <Card className="mx-auto py-4 sm:py-6 gap-4 sm:gap-6">
@@ -46,7 +46,6 @@ export default function HeaderPage({
                     </div>
                 </div>
 
-                {/* Tombol List */}
                 <Button
                     variant="outline"
                     onClick={onShowList}
@@ -57,7 +56,6 @@ export default function HeaderPage({
                     <span className="hidden sm:inline">List</span>
                 </Button>
 
-                {/* Tombol Refresh */}
                 <Button
                     variant="outline"
                     onClick={refresh}
@@ -68,7 +66,6 @@ export default function HeaderPage({
                     <span className="hidden sm:inline">Refresh</span>
                 </Button>
 
-                {/* Tombol Bersihkan */}
                 <Button
                     variant="outline"
                     onClick={clear}
@@ -79,7 +76,6 @@ export default function HeaderPage({
                     <span className="hidden sm:inline">Bersihkan</span>
                 </Button>
 
-                {/* Tombol Simpan / Update */}
                 <Button
                     onClick={onSave}
                     disabled={rows.length === 0 || saving}
@@ -88,12 +84,8 @@ export default function HeaderPage({
                 >
                     <Save className="h-4 w-4" />
                     <span className="hidden sm:inline">
-            {saving
-                ? "Menyimpan..."
-                : isUpdate
-                    ? "Simpan Perubahan"
-                    : "Simpan"}
-          </span>
+                        {saving ? "Menyimpan..." : isUpdate ? "Simpan Perubahan" : "Simpan"}
+                    </span>
                 </Button>
             </div>
 
@@ -101,9 +93,10 @@ export default function HeaderPage({
                 <TargetKomisi
                     targetKomisi={targetKomisi}
                     onChangeTargetKomisi={setTargetKomisi}
-                    customer = {customer}
+                    customer={customer}
                     setCustomer={setCustomer}
                     masterKomisiSelected={masterKomisiSelected}
+                    jwtKategori={jwtKategori}
                 />
             </CardContent>
         </Card>
