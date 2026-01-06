@@ -8,6 +8,7 @@ async function main() {
     const akun = "budibeni"
     const noHp = "087884233604"
     const password = "Rahasia"
+    const kategori = "RETAIL"
     const hash = await bcrypt.hash(password, 10)
 
     await prisma.tbUser.upsert({
@@ -17,6 +18,7 @@ async function main() {
             email,
             akun,
             noHp,
+            kategori,
             nama: "Budi Beni",
             passwordHash: hash,
             role: "admin",
