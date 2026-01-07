@@ -1,24 +1,32 @@
-// components/AppSidebar.jsx
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { SIDEBAR_MENUS } from "@/components/constants/sidebar-menu"
+import Link from "next/link";
+import ThemeToggle from "@/components/ui/theme-toggle";
+import { Button } from "@/components/ui/button";
 import {
-    Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail,
-    SidebarProvider, SidebarTrigger, SidebarInset,
-} from "@/components/ui/sidebar"
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarHeader,
+    SidebarRail,
+    SidebarProvider,
+    SidebarTrigger,
+    SidebarInset,
+} from "@/components/ui/sidebar";
 import {
-    DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
-    DropdownMenuSeparator, DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
-import { User, Key, LogOut } from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import ThemeToggle from "@/components/ui/theme-toggle"
-import { Button } from "@/components/ui/button"
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
+import { User, Key, LogOut } from "lucide-react";
+
+import { useSidebarMenus } from "@/components/sidebar/use-sidebar-menus";
 
 function cx(...cls) {
-    return cls.filter(Boolean).join(" ")
+    return cls.filter(Boolean).join(" ");
 }
 
 function MenuItem({ href, icon: Icon, label, active }) {
@@ -35,58 +43,18 @@ function MenuItem({ href, icon: Icon, label, active }) {
             <Icon size={18} />
             <span>{label}</span>
         </Link>
-    )
+    );
 }
 
 export default function AppSidebarLayout({ children, user }) {
-    const pathname = usePathname()
+    const { displayName, sectionGroups, activeMenu, isActive, pathname } =
+        useSidebarMenus(user);
 
-    // state user (sudah datang dari layout, termasuk akses)
-    const [me, setMe] = useState(user || null)
-
-    // fallback: jika belum ada user atau akses belum terisi, ambil dari /api/me
-    useEffect(() => {
-        if (!me || me.akses == null) {
-            fetch("/api/me")
-                .then((r) => (r.ok ? r.json() : null))
-                .then((data) => data && setMe(data))
-                .catch(() => {})
-        }
-    }, [me])
-
-    const displayName =
-        (me?.nama && me.nama.trim()) || me?.akun || me?.email || "Pengguna"
-
-
-    // policy akses:
-    // - item public → selalu boleh
-    // - admin → boleh semua
-    // - loading user → tampilkan agar tidak blank
-    const hasAksesInfo = !!(me && typeof me.akses === "object")
-    const can = (item) => {
-       if (item.public) return true
-       if (!me) return true
-       if (me.role === "admin") return true
-       if (!hasAksesInfo) return true
-       return !!me.akses?.[item.id]
-    }
-
-
-    const isActive = (href) =>
-        pathname === href || (href !== "/" && pathname.startsWith(href + "/"))
-
-    const activeMenu = SIDEBAR_MENUS.find((m) => isActive(m.href))
     const headerTitle =
         activeMenu?.label ||
         (pathname?.split("/").filter(Boolean).pop() || "Beranda")
             .replace(/-/g, " ")
-            .replace(/\b\w/g, (c) => c.toUpperCase())
-
-    const sectionGroups = SIDEBAR_MENUS.reduce((acc, m) => {
-        acc[m.section] = acc[m.section] || []
-        acc[m.section].push(m)
-        return acc
-    }, {})
+            .replace(/\b\w/g, (c) => c.toUpperCase());
 
     return (
         <SidebarProvider>
@@ -99,14 +67,14 @@ export default function AppSidebarLayout({ children, user }) {
 
                 <SidebarContent>
                     {Object.entries(sectionGroups).map(([section, items]) => {
-                        const visible = items.filter((it) => can(it))
-                        if (visible.length === 0) return null
+                        if (!items?.length) return null;
                         return (
                             <div key={section} className="space-y-1 mt-2">
                                 <div className="px-4 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                     {section}
                                 </div>
-                                {visible.map(({ href, icon, label }) => (
+
+                                {items.map(({ href, icon, label }) => (
                                     <MenuItem
                                         key={href}
                                         href={href}
@@ -116,7 +84,7 @@ export default function AppSidebarLayout({ children, user }) {
                                     />
                                 ))}
                             </div>
-                        )
+                        );
                     })}
                 </SidebarContent>
 
@@ -124,7 +92,10 @@ export default function AppSidebarLayout({ children, user }) {
                     <div className="flex items-center justify-start px-2">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="flex flex-1 items-center gap-2 cursor-pointer">
+                                <Button
+                                    variant="ghost"
+                                    className="flex flex-1 items-center gap-2 cursor-pointer"
+                                >
                                     <User className="h-4 w-4" />
                                     <span
                                         className="inline font-medium truncate max-w-[160px]"
@@ -133,7 +104,6 @@ export default function AppSidebarLayout({ children, user }) {
                     {displayName}
                   </span>
                                 </Button>
-
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent side="top" align="start" className="w-52">
@@ -150,7 +120,10 @@ export default function AppSidebarLayout({ children, user }) {
                                 </DropdownMenuItem>
 
                                 <DropdownMenuItem asChild>
-                                    <Link href="/account/password" className="flex items-center gap-2">
+                                    <Link
+                                        href="/account/password"
+                                        className="flex items-center gap-2"
+                                    >
                                         <Key className="h-4 w-4" />
                                         Ganti Sandi
                                     </Link>
@@ -184,10 +157,8 @@ export default function AppSidebarLayout({ children, user }) {
                     </div>
                 </header>
 
-                <main className="flex-1 p-4 bg-background text-foreground">
-                    {children}
-                </main>
+                <main className="flex-1 p-4 bg-background text-foreground">{children}</main>
             </SidebarInset>
         </SidebarProvider>
-    )
+    );
 }
