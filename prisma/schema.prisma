@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "mysql" // MariaDB pakai provider mysql
   url      = env("DATABASE_URL")
 }
 
@@ -11,114 +11,156 @@ model TbWebInfo {
   id          Int     @id @default(autoincrement())
   app_name    String? @db.VarChar(100)
   company     String? @db.VarChar(100)
-  mode        String? @db.VarChar(100)
+  mode        String? @db.VarChar(20)
   copyright   String? @db.VarChar(100)
-  email       String? @db.VarChar(100)
-  description String? @db.VarChar(500)
+  email       String? @db.VarChar(150)
+  description String? @db.Text
 
   @@map("web_info")
 }
 
 model TbUser {
-  id            Int      @id @default(autoincrement())
-  akun          String   @unique
-  email         String   @unique
-  noHp          String   @unique
-  nama          String?
-  passwordHash  String
-  role          String   @default("user")
-  akses         Json?
-  kategori      String?
-  bagian        String?
-  downline      Json?
-  upline        Json?
-  aktif         Boolean  @default(true)
-  dibuatOleh    String?
+  id    Int     @id @default(autoincrement())
+  akun  String  @unique @db.VarChar(50)
+  email String  @unique @db.VarChar(150)
+  noHp  String  @unique @db.VarChar(20)
+  nama  String? @db.VarChar(100)
+
+  // biasanya hash bcrypt/argon2 panjangnya aman di 255
+  passwordHash String @db.VarChar(255)
+
+  role String @default("user") @db.VarChar(20)
+
+  // MariaDB JSON (pastikan MariaDB >= 10.2.7)
+  akses Json?
+
+  kategori String? @db.VarChar(50)
+  bagian   String? @db.VarChar(50)
+
+  downline Json?
+  upline   Json?
+
+  aktif Boolean @default(true)
+
+  dibuatOleh    String?  @db.VarChar(100)
   dibuatTanggal DateTime @default(now())
-  diubahOleh    String?
+  diubahOleh    String?  @db.VarChar(100)
   diubahTanggal DateTime @updatedAt
 
   @@map("tb_user")
 }
 
 model TbArtikel {
-  id            String   @id @default(cuid())
-  judul         String
-  artikel       String
-  terbit        Boolean  @default(false)
-  dibuatOleh    String?  @map("dibuat_oleh")
+  id      String  @id @default(cuid())
+  judul   String  @db.VarChar(200)
+  artikel String  @db.Text
+  terbit  Boolean @default(false)
+
+  dibuatOleh    String?  @map("dibuat_oleh") @db.VarChar(100)
   dibuatTanggal DateTime @default(now()) @map("dibuat_tanggal")
-  diubahOleh    String?  @map("diubah_oleh")
+  diubahOleh    String?  @map("diubah_oleh") @db.VarChar(100)
   diubahTanggal DateTime @updatedAt @map("diubah_tanggal")
 
   @@map("tb_artikel")
 }
 
 model TbMasterItem {
-  id                  String   @id @default(cuid())
-  kodeItem            String   @unique
-  namaItem            String
-  deskripsi           String?
-  kategori            String? //BLOCK, SLAB, BOND , SHIELD
-  jenisItem           String?
-  hpp                 Int?
-  harga               Int?
-  satuan              String // m3
-  nilaiSatuan         Float? // contoh: 0.75
-  nilaiKonversi       Float? // 84 pcs
-  satuanKonversi      String? // pcs
-  nilaiPenggunaan     Float? // 10 = 0.75 (m3)
-  satuanPenggunaan    String? //m2
-  deskripsiPenggunaan String? //Luas Dinding (m²)
-  gambarUrl           String?
-  linkWeb             String?
-  dibuatOleh          String?
-  dibuatTanggal       DateTime @default(now())
-  diubahOleh          String?
-  diubahTanggal       DateTime @updatedAt
+  id String @id @default(cuid())
+
+  kodeItem String @unique @db.VarChar(50)
+  namaItem String @db.VarChar(150)
+
+  deskripsi String? @db.Text
+
+  kategori  String? @db.VarChar(20) // BLOCK, SLAB, BOND, SHIELD
+  jenisItem String? @db.VarChar(50)
+
+  // UANG: jangan Float, pakai Decimal
+  hpp   Decimal? @db.Decimal(18, 2)
+  harga Decimal? @db.Decimal(18, 2)
+
+  satuan String @db.VarChar(20) // m3
+
+  // Nilai pecahan: pakai Decimal agar presisi
+  nilaiSatuan    Decimal? @db.Decimal(12, 4) // contoh: 0.75
+  nilaiKonversi  Decimal? @db.Decimal(12, 4) // 84 pcs
+  satuanKonversi String?  @db.VarChar(20) // pcs
+
+  nilaiPenggunaan     Decimal? @db.Decimal(12, 4) // 10 = 0.75 (m3)
+  satuanPenggunaan    String?  @db.VarChar(20) // m2
+  deskripsiPenggunaan String?  @db.VarChar(150) // Luas Dinding (m²)
+
+  gambarUrl String? @db.VarChar(255)
+  linkWeb   String? @db.VarChar(255)
+
+  dibuatOleh    String?  @db.VarChar(100)
+  dibuatTanggal DateTime @default(now())
+  diubahOleh    String?  @db.VarChar(100)
+  diubahTanggal DateTime @updatedAt
 
   @@map("tb_master_item")
 }
 
 model TbMasterKomisi {
-  id                String   @id @default(cuid())
-  kategori          String // wajib
-  customer          String // wajib
-  persentase        Float?
-  minAchKomisiDasar Float?
-  minAchBonusUtama  Float?
-  valueBonusUtama   Float?
-  minAchBonusExtra  Float?
-  valueBonusExtra   Float?
-  dibuatOleh        String?
-  dibuatTanggal     DateTime @default(now())
-  diubahOleh        String?
-  diubahTanggal     DateTime @updatedAt
+  id String @id @default(cuid())
+
+  kategori String @db.VarChar(20) // wajib
+  customer String @db.VarChar(50) // wajib
+
+  // persen (misal 0.44 atau 4.5): Decimal
+  persentase Decimal? @db.Decimal(7, 4)
+
+  // achievement threshold biasanya pecahan (0.75, 1.2, dst)
+  minAchKomisiDasar Decimal? @db.Decimal(10, 4)
+  minAchBonusUtama  Decimal? @db.Decimal(10, 4)
+
+  // value bonus biasanya uang
+  valueBonusUtama Decimal? @db.Decimal(18, 2)
+
+  minAchBonusExtra Decimal? @db.Decimal(10, 4)
+  valueBonusExtra  Decimal? @db.Decimal(18, 2)
+
+  dibuatOleh    String?  @db.VarChar(100)
+  dibuatTanggal DateTime @default(now())
+  diubahOleh    String?  @db.VarChar(100)
+  diubahTanggal DateTime @updatedAt
 
   @@unique([kategori, customer], name: "uk_TbMasterKomisi_kat_cust")
   @@map("tb_master_komisi")
 }
 
 model TbSimulasiKomisi {
-  id                  String   @id @default(cuid())
-  judul               String   @default("Simulasi Komisi")
-  catatan             String?
-  customer            String?
-  targetGlobal        Float? // Target global nominal (Rp)
+  id String @id @default(cuid())
+
+  judul    String  @default("Simulasi Komisi") @db.VarChar(150)
+  catatan  String? @db.Text
+  customer String? @db.VarChar(50)
+
+  // uang: Decimal
+  targetGlobal Decimal? @db.Decimal(18, 2)
+
+  // JSON snapshot/config
   targetKategori      Json // { "Bond": "40%", "Shield": "30%" }
   achievementKategori Json // { "Bond": 1.2, "Shield": 0.9 }
-  komisiDasarTotal    Float
-  komisiDasarKategori Json // { "Bond": 2_000_000, "Shield": 1_000_000 }
-  bonusUtamaTotal     Float
-  bonusUtamaKategori  Json // { "Bond": 200_000, "Shield": 100_000 }
-  bonusExtraTotal     Float
-  bonusExtraKategori  Json // { "Bond": 40_000, "Shield": 0 }
-  subtotalTotal       Float // Total keseluruhan = dasar + bonus utama + bonus ekstra
-  rowsItem            Json // [{ id, kodeItem, kategori, harga, qty, persen, subtotal, ... }]
-  dibuatOleh          String?
-  dibuatTanggal       DateTime @default(now())
-  diubahOleh          String?
-  diubahTanggal       DateTime @updatedAt
+
+  // uang: Decimal
+  komisiDasarTotal    Decimal @db.Decimal(18, 2)
+  komisiDasarKategori Json // { "Bond": 2000000, "Shield": 1000000 }
+
+  bonusUtamaTotal    Decimal @db.Decimal(18, 2)
+  bonusUtamaKategori Json
+
+  bonusExtraTotal    Decimal @db.Decimal(18, 2)
+  bonusExtraKategori Json
+
+  subtotalTotal Decimal @db.Decimal(18, 2)
+
+  rowsItem Json // [{ id, kodeItem, kategori, harga, qty, persen, subtotal, ... }]
+
+  dibuatOleh    String?  @db.VarChar(100)
+  dibuatTanggal DateTime @default(now())
+  diubahOleh    String?  @db.VarChar(100)
+  diubahTanggal DateTime @updatedAt
 
   @@map("tb_simulasi_komisi")
 }
