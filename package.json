@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "studio": "prisma studio",
-    "db:seed": "node --env-file=.env prisma/seed.mjs"
+    "migrate": "npx prisma migrate dev",
+    "db:seed": "node --env-file=.env prisma/seed-users.js"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
