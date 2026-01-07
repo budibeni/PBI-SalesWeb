@@ -8,6 +8,7 @@ const SUPER_ACCOUNT = "budibeni"
 
 const PUBLIC_PATHS = [
     "/login",
+    "/info",
     "/forbidden",
     "/api/auth/login",
     "/api/auth/register",
