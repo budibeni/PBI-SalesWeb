@@ -7,6 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model TbWebInfo {
+  id          Int     @id @default(autoincrement())
+  app_name    String? @db.VarChar(100)
+  company     String? @db.VarChar(100)
+  mode        String? @db.VarChar(100)
+  copyright   String? @db.VarChar(100)
+  email       String? @db.VarChar(100)
+  description String? @db.VarChar(500)
+
+  @@map("web_info")
+}
+
 model TbUser {
   id            Int      @id @default(autoincrement())
   akun          String   @unique
@@ -25,6 +37,8 @@ model TbUser {
   dibuatTanggal DateTime @default(now())
   diubahOleh    String?
   diubahTanggal DateTime @updatedAt
+
+  @@map("tb_user")
 }
 
 model TbArtikel {
@@ -36,6 +50,8 @@ model TbArtikel {
   dibuatTanggal DateTime @default(now()) @map("dibuat_tanggal")
   diubahOleh    String?  @map("diubah_oleh")
   diubahTanggal DateTime @updatedAt @map("diubah_tanggal")
+
+  @@map("tb_artikel")
 }
 
 model TbMasterItem {
@@ -60,6 +76,8 @@ model TbMasterItem {
   dibuatTanggal       DateTime @default(now())
   diubahOleh          String?
   diubahTanggal       DateTime @updatedAt
+
+  @@map("tb_master_item")
 }
 
 model TbMasterKomisi {
@@ -78,6 +96,7 @@ model TbMasterKomisi {
   diubahTanggal     DateTime @updatedAt
 
   @@unique([kategori, customer], name: "uk_TbMasterKomisi_kat_cust")
+  @@map("tb_master_komisi")
 }
 
 model TbSimulasiKomisi {
@@ -100,4 +119,6 @@ model TbSimulasiKomisi {
   dibuatTanggal       DateTime @default(now())
   diubahOleh          String?
   diubahTanggal       DateTime @updatedAt
+
+  @@map("tb_simulasi_komisi")
 }
