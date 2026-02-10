@@ -9,14 +9,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import {User, Lock, Eye, EyeOff, ShieldCheck,  BookOpenText} from "lucide-react"
 
 export default function LoginPage() {
     const search = useSearchParams()
     const redirect   = search.get("redirect")   || "/"
     const errorMsg   = search.get("error")      || ""
-    const prefillId  = search.get("identifier") || "budibeni"
+    const prefillId  = search.get("identifier") || ""
 
     const idRef = useRef(null)
     const [showPassword, setShowPassword] = useState(false)
@@ -90,7 +89,7 @@ export default function LoginPage() {
                                     autoComplete="current-password"
                                     className="pl-9 pr-10"
                                     required
-                                    defaultValue="Rahasia"
+                                    defaultValue=""
                                 />
                                 <button
                                     type="button"

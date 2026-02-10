@@ -8,8 +8,8 @@
 import {asNum, ROUND2} from "@/app/komisi/logic/TableProduk/math";
 
 export const MIN_QTY   = 0.01; // minimal qty yang diizinkan
-export const MIN_RATIO = 0.75; // harga minimal = 0.75 * MSRP
-export const MAX_RATIO = 1.25; // harga maksimal = 1.25 * MSRP
+export const MIN_RATIO = 0; // harga minimal = 0.75 * MSRP
+export const MAX_RATIO = 10; // harga maksimal = 1.25 * MSRP
 
 // 🔎 Contoh pemakaian (di file lain):
 // import { MIN_QTY } from "./rules";
